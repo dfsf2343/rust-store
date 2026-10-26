@@ -9,7 +9,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins
 {
-    [Info("Web Store", "SCRAPYARD", "1.0.0")]
+    [Info("Web Store", "CC Practice", "1.0.0")]
     [Description("Delivers kits bought on the server website: syncs purchases, enforces cooldowns and gives items.")]
     public class WebStore : RustPlugin
     {

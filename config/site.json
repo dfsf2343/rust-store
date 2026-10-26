@@ -1,6 +1,6 @@
 {
-  "name": "Scrapyard 3x",
-  "shortName": "Scrapyard",
+  "name": "CC Practice 3x",
+  "shortName": "CC Practice",
   "tagline": "3x gather. Weekly wipes. Built for the grind.",
   "description": "A 3x modded Rust server with weekly wipes, a 4-player team cap and instant kit delivery from the store.",
   "region": "US East",
@@ -101,7 +101,7 @@
     }
   ],
   "legal": {
-    "operatorName": "Scrapyard 3x",
+    "operatorName": "CC Practice 3x",
     "contactEmail": "support@example.com",
     "lastUpdated": "2026-10-26"
   },

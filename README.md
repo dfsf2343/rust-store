@@ -137,7 +137,7 @@ Entra con un SteamID listado en `ADMIN_STEAM_IDS` y abre `/admin`:
 
 ## Antes de abrir la tienda
 
-- Cambia el nombre de ejemplo `Scrapyard 3x`, la dirección `play.example.com:28015`, el Discord, el horario de wipe y el email en `config/site.json`.
+- Cambia la dirección de ejemplo `play.example.com:28015`, el Discord, el horario de wipe y el email en `config/site.json`.
 - Revisa los textos de Terms, Refund policy y Privacy (`web/src/pages/Legal.tsx`) con alguien que conozca la normativa que te aplica. Son una base razonable, no asesoría legal.
 - Haz una compra de prueba con cada proveedor en modo test o sandbox.
 
