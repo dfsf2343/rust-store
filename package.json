@@ -1,0 +1,22 @@
+{
+  "name": "rust-store",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Website, kit store and game plugin for a Rust server.",
+  "scripts": {
+    "install:all": "npm ci && npm --prefix server ci && npm --prefix web ci",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm run build:cloudflare",
+    "start": "npm --prefix server run start",
+    "test": "npm --prefix server test",
+    "typecheck": "wrangler types && npm --prefix server run typecheck && npm --prefix server run typecheck:worker && npm --prefix web run typecheck",
+    "build:cloudflare": "npm --prefix server install --ignore-scripts --no-audit --no-fund && npm --prefix web install --no-audit --no-fund && npm --prefix web run build && npm --prefix server run cf:headers",
+    "dev:cloudflare": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build:node": "npm --prefix web run build && npm --prefix server run build"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.3"
+  }
+}

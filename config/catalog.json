@@ -1,0 +1,126 @@
+{
+  "currency": "USD",
+  "durations": [
+    { "id": "7d", "label": "7 days", "days": 7, "multiplier": 0.4 },
+    { "id": "30d", "label": "30 days", "days": 30, "multiplier": 1, "default": true },
+    { "id": "90d", "label": "90 days", "days": 90, "multiplier": 2.4, "badge": "Save 20%" },
+    { "id": "lifetime", "label": "Lifetime", "days": null, "multiplier": 5, "badge": "Best value" }
+  ],
+  "kits": [
+    {
+      "id": "scrapper",
+      "name": "Scrapper",
+      "tier": 1,
+      "basePrice": 5,
+      "cooldownHours": 3,
+      "tagline": "Fresh-spawn essentials to get your first base up fast.",
+      "items": [
+        { "shortname": "hatchet", "name": "Hatchet", "amount": 1, "category": "tool" },
+        { "shortname": "pickaxe", "name": "Pickaxe", "amount": 1, "category": "tool" },
+        { "shortname": "wood", "name": "Wood", "amount": 3000, "category": "resource" },
+        { "shortname": "stones", "name": "Stones", "amount": 3000, "category": "resource" },
+        { "shortname": "cloth", "name": "Cloth", "amount": 200, "category": "resource" },
+        { "shortname": "pistol.revolver", "name": "Revolver", "amount": 1, "category": "weapon" },
+        { "shortname": "ammo.pistol", "name": "Pistol Bullet", "amount": 64, "category": "ammo" },
+        { "shortname": "bandage", "name": "Bandage", "amount": 6, "category": "medical" },
+        { "shortname": "can.beans", "name": "Can of Beans", "amount": 5, "category": "food" }
+      ]
+    },
+    {
+      "id": "builder",
+      "name": "Builder",
+      "tier": 2,
+      "basePrice": 20,
+      "cooldownHours": 6,
+      "tagline": "Materials, locks and storage for a secure base every few hours.",
+      "items": [
+        { "shortname": "hammer", "name": "Hammer", "amount": 1, "category": "tool" },
+        { "shortname": "building.planner", "name": "Building Plan", "amount": 1, "category": "tool" },
+        { "shortname": "wood", "name": "Wood", "amount": 6000, "category": "resource" },
+        { "shortname": "stones", "name": "Stones", "amount": 5000, "category": "resource" },
+        { "shortname": "metal.fragments", "name": "Metal Fragments", "amount": 2000, "category": "resource" },
+        { "shortname": "metal.refined", "name": "High Quality Metal", "amount": 100, "category": "resource" },
+        { "shortname": "cupboard.tool", "name": "Tool Cupboard", "amount": 1, "category": "building" },
+        { "shortname": "door.hinged.metal", "name": "Sheet Metal Door", "amount": 1, "category": "building" },
+        { "shortname": "lock.code", "name": "Code Lock", "amount": 3, "category": "building" },
+        { "shortname": "box.wooden.large", "name": "Large Wood Box", "amount": 1, "category": "building" },
+        { "shortname": "furnace", "name": "Furnace", "amount": 1, "category": "building" }
+      ]
+    },
+    {
+      "id": "ranger",
+      "name": "Ranger",
+      "tier": 3,
+      "basePrice": 30,
+      "cooldownHours": 6,
+      "tagline": "A mid-tier loadout for roaming monuments and defending your base.",
+      "items": [
+        { "shortname": "rifle.semiauto", "name": "Semi-Automatic Rifle", "amount": 1, "category": "weapon" },
+        { "shortname": "pistol.python", "name": "Python Revolver", "amount": 1, "category": "weapon" },
+        { "shortname": "ammo.rifle", "name": "5.56 Rifle Ammo", "amount": 128, "category": "ammo" },
+        { "shortname": "ammo.pistol", "name": "Pistol Bullet", "amount": 128, "category": "ammo" },
+        { "shortname": "weapon.mod.holosight", "name": "Holosight", "amount": 1, "category": "attachment" },
+        { "shortname": "coffeecan.helmet", "name": "Coffee Can Helmet", "amount": 1, "category": "armor" },
+        { "shortname": "roadsign.jacket", "name": "Road Sign Jacket", "amount": 1, "category": "armor" },
+        { "shortname": "roadsign.kilt", "name": "Road Sign Kilt", "amount": 1, "category": "armor" },
+        { "shortname": "hoodie", "name": "Hoodie", "amount": 1, "category": "clothing" },
+        { "shortname": "pants", "name": "Pants", "amount": 1, "category": "clothing" },
+        { "shortname": "shoes.boots", "name": "Boots", "amount": 1, "category": "clothing" },
+        { "shortname": "syringe.medical", "name": "Medical Syringe", "amount": 4, "category": "medical" },
+        { "shortname": "bandage", "name": "Bandage", "amount": 6, "category": "medical" }
+      ]
+    },
+    {
+      "id": "warlord",
+      "name": "Warlord",
+      "tier": 4,
+      "basePrice": 50,
+      "cooldownHours": 12,
+      "tagline": "A full PvP kit built around the AK, with metal armor to match.",
+      "items": [
+        { "shortname": "rifle.ak", "name": "Assault Rifle", "amount": 1, "category": "weapon" },
+        { "shortname": "smg.mp5", "name": "MP5A4", "amount": 1, "category": "weapon" },
+        { "shortname": "ammo.rifle", "name": "5.56 Rifle Ammo", "amount": 256, "category": "ammo" },
+        { "shortname": "ammo.pistol", "name": "Pistol Bullet", "amount": 128, "category": "ammo" },
+        { "shortname": "weapon.mod.holosight", "name": "Holosight", "amount": 1, "category": "attachment" },
+        { "shortname": "weapon.mod.extendedmags", "name": "Extended Magazine", "amount": 1, "category": "attachment" },
+        { "shortname": "metal.facemask", "name": "Metal Facemask", "amount": 1, "category": "armor" },
+        { "shortname": "metal.plate.torso", "name": "Metal Chest Plate", "amount": 1, "category": "armor" },
+        { "shortname": "roadsign.kilt", "name": "Road Sign Kilt", "amount": 1, "category": "armor" },
+        { "shortname": "hoodie", "name": "Hoodie", "amount": 1, "category": "clothing" },
+        { "shortname": "pants", "name": "Pants", "amount": 1, "category": "clothing" },
+        { "shortname": "tactical.gloves", "name": "Tactical Gloves", "amount": 1, "category": "clothing" },
+        { "shortname": "shoes.boots", "name": "Boots", "amount": 1, "category": "clothing" },
+        { "shortname": "syringe.medical", "name": "Medical Syringe", "amount": 6, "category": "medical" },
+        { "shortname": "largemedkit", "name": "Large Medkit", "amount": 2, "category": "medical" }
+      ]
+    },
+    {
+      "id": "overlord",
+      "name": "Overlord",
+      "tier": 5,
+      "basePrice": 100,
+      "cooldownHours": 24,
+      "tagline": "Top-tier firepower, heavy plate armor and a raid starter.",
+      "items": [
+        { "shortname": "rifle.ak", "name": "Assault Rifle", "amount": 1, "category": "weapon" },
+        { "shortname": "lmg.m249", "name": "M249", "amount": 1, "category": "weapon" },
+        { "shortname": "rifle.l96", "name": "L96 Rifle", "amount": 1, "category": "weapon" },
+        { "shortname": "ammo.rifle", "name": "5.56 Rifle Ammo", "amount": 384, "category": "ammo" },
+        { "shortname": "ammo.rifle.hv", "name": "HV 5.56 Rifle Ammo", "amount": 128, "category": "ammo" },
+        { "shortname": "weapon.mod.small.scope", "name": "8x Zoom Scope", "amount": 1, "category": "attachment" },
+        { "shortname": "weapon.mod.holosight", "name": "Holosight", "amount": 1, "category": "attachment" },
+        { "shortname": "heavy.plate.helmet", "name": "Heavy Plate Helmet", "amount": 1, "category": "armor" },
+        { "shortname": "heavy.plate.jacket", "name": "Heavy Plate Jacket", "amount": 1, "category": "armor" },
+        { "shortname": "heavy.plate.pants", "name": "Heavy Plate Pants", "amount": 1, "category": "armor" },
+        { "shortname": "tactical.gloves", "name": "Tactical Gloves", "amount": 1, "category": "clothing" },
+        { "shortname": "shoes.boots", "name": "Boots", "amount": 1, "category": "clothing" },
+        { "shortname": "syringe.medical", "name": "Medical Syringe", "amount": 6, "category": "medical" },
+        { "shortname": "largemedkit", "name": "Large Medkit", "amount": 2, "category": "medical" },
+        { "shortname": "explosive.timed", "name": "Timed Explosive Charge", "amount": 3, "category": "explosive" },
+        { "shortname": "rocket.launcher", "name": "Rocket Launcher", "amount": 1, "category": "weapon" },
+        { "shortname": "ammo.rocket.basic", "name": "Rocket", "amount": 6, "category": "explosive" }
+      ]
+    }
+  ]
+}

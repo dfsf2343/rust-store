@@ -1,0 +1,112 @@
+{
+  "name": "Scrapyard 3x",
+  "shortName": "Scrapyard",
+  "tagline": "3x gather. Weekly wipes. Built for the grind.",
+  "description": "A 3x modded Rust server with weekly wipes, a 4-player team cap and instant kit delivery from the store.",
+  "region": "US East",
+  "connect": {
+    "address": "play.example.com:28015"
+  },
+  "links": {
+    "discord": "https://discord.gg/your-invite",
+    "steamGroup": null
+  },
+  "wipe": {
+    "timezone": "America/New_York",
+    "slots": [{ "weekday": 4, "time": "14:00" }],
+    "label": "Every Thursday at 2:00 PM ET"
+  },
+  "highlights": [
+    { "label": "Gather", "value": "3x" },
+    { "label": "Team cap", "value": "4" },
+    { "label": "Map wipe", "value": "Weekly" },
+    { "label": "Region", "value": "US East" }
+  ],
+  "features": [
+    {
+      "title": "3x gather, loot and components",
+      "body": "Nodes, barrels and crates pay out three times vanilla, so you are fighting over monuments on day one instead of farming for a week."
+    },
+    {
+      "title": "Weekly map wipes",
+      "body": "A fresh map every Thursday at 2:00 PM ET. Blueprints reset with the monthly forced wipe."
+    },
+    {
+      "title": "Instant kit delivery",
+      "body": "Buy on this site, join the server and type /claim. Your kit is ready within seconds of paying."
+    },
+    {
+      "title": "Active moderation",
+      "body": "Report cheaters and get support in our Discord. Staff review every report."
+    }
+  ],
+  "rules": [
+    {
+      "title": "Fair play",
+      "items": [
+        "No cheats, scripts, macros or third-party tools that give an advantage.",
+        "No exploiting bugs. Report them to staff instead.",
+        "No ban evasion on alternate accounts."
+      ]
+    },
+    {
+      "title": "Teams",
+      "items": [
+        "Maximum team size is 4, including alliances and roaming together.",
+        "Do not share bases, codes or tool cupboard access beyond your team.",
+        "Switching teams mid-wipe requires leaving your old base."
+      ]
+    },
+    {
+      "title": "Chat and conduct",
+      "items": [
+        "No racism, hate speech, threats or harassment.",
+        "No doxxing or sharing personal information.",
+        "No advertising other servers or services."
+      ]
+    },
+    {
+      "title": "Store purchases",
+      "items": [
+        "Buying a kit does not exempt anyone from the rules.",
+        "Players banned for breaking the rules lose access to purchased kits without a refund.",
+        "Do not trade or sell store items for real money."
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "q": "How do I receive a kit after buying it?",
+      "a": "Join the server and type /claim to list your kits, then /claim followed by the kit name to receive it. New purchases are usually active within 30 seconds. Make sure you have enough free inventory slots."
+    },
+    {
+      "q": "How long does a kit last?",
+      "a": "You choose the duration at checkout: 7, 30 or 90 days, or lifetime. During that time you can claim the kit once per cooldown. Buying the same kit again adds time to your current access."
+    },
+    {
+      "q": "Do kits carry over between wipes?",
+      "a": "Yes. Access is time-based and carries across wipes. Items you have already claimed are wiped with the map like everything else."
+    },
+    {
+      "q": "Why do I see different payment methods than my friend?",
+      "a": "Payment options depend on where you are. In the United States checkout runs on Stripe (cards, Apple Pay, Google Pay). In South America we use Mercado Pago. Everywhere else you can choose from the options shown at checkout."
+    },
+    {
+      "q": "Can I buy a kit for a friend?",
+      "a": "Not at the moment. Purchases are tied to the Steam account you sign in with."
+    },
+    {
+      "q": "I paid but did not get my kit. What now?",
+      "a": "Open a ticket in our Discord with the order ID from your Account page and staff will fix it."
+    }
+  ],
+  "legal": {
+    "operatorName": "Scrapyard 3x",
+    "contactEmail": "support@example.com",
+    "lastUpdated": "2026-10-26"
+  },
+  "store": {
+    "inGameCommand": "claim",
+    "itemIconUrl": null
+  }
+}

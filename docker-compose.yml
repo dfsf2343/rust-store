@@ -1,0 +1,34 @@
+services:
+  store:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    volumes:
+      - store-data:/data
+      # Edit these files on the host, then use "Reload config files" in the admin page.
+      - ./config:/app/config:ro
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - store
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env, for example store.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  store-data:
+  caddy-data:
+  caddy-config:
