@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { steamLoginUrl, type Duration, type Kit } from '../api';
 
 export function TierPlate({ tier, size = 'md' }: { tier: number; size?: 'sm' | 'md' | 'lg' }) {
@@ -66,12 +66,24 @@ export function CopyButton({ text, label, copiedLabel = 'Copied', className = 'b
 export function SteamSignIn({ returnTo, children = 'Sign in through Steam', className = 'button button--steam' }: { returnTo?: string; children?: ReactNode; className?: string }) {
   const location = useLocation();
   const target = returnTo ?? `${location.pathname}${location.search}`;
+  const icon = (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className="button__icon">
+      <circle cx="8" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 12h9M18 12v3M15.5 12v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+  if (import.meta.env.MODE === 'demo') {
+    // No Steam round trip in the preview: sign in as the sample player.
+    return (
+      <Link className={className} to={`/demo-login?returnTo=${encodeURIComponent(target)}`}>
+        {icon}
+        Sign in (demo)
+      </Link>
+    );
+  }
   return (
     <a className={className} href={steamLoginUrl(target)}>
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className="button__icon">
-        <circle cx="8" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M12 12h9M18 12v3M15.5 12v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
+      {icon}
       {children}
     </a>
   );

@@ -1,0 +1,65 @@
+/* Demo build only. Yellow is the site's attention colour, so the preview label uses it. */
+.demo-bar {
+  background: var(--lane);
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.demo-bar__inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 8px var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.demo-bar__note {
+  margin: 0;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.demo-bar__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.demo-bar select {
+  font: inherit;
+  padding: 4px 8px;
+  color: var(--ink);
+  background: var(--reflective);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+}
+
+.demo-bar__button {
+  font: inherit;
+  font-weight: 700;
+  padding: 4px 12px;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.demo-bar__button:hover {
+  color: var(--lane);
+  background: var(--ink);
+}
+
+.demo-bar__button--quiet {
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.demo-bar__button:focus-visible,
+.demo-bar select:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}

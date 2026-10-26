@@ -162,6 +162,8 @@ npm test                     # tests del backend
 npm run typecheck            # Node, Worker y frontend
 ```
 
+Vista previa sin backend: `npm --prefix web run build:demo` genera `web/dist-demo/preview.html`, el sitio completo en un solo archivo con datos de ejemplo y pagos simulados (sirve para mostrarlo antes de publicar).
+
 Como en Cloudflare (Worker y Durable Object locales): crea `.dev.vars` con `NODE_ENV=development`, `DEV_LOGIN=true` y las claves de prueba, y corre `STATIC_HEADERS_HTTP=1 npm run dev:cloudflare`. La cabecera `X-Dev-Country: CL` simula un comprador de otro país.
 
 Con Node:

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, ApiError, type CheckoutOptions, type ProviderId } from '../api';
 import { Notice, PageHeader, SteamSignIn, TierPlate } from '../components/bits';
 import { useApi, useStore } from '../data';
@@ -16,6 +16,7 @@ export function Checkout() {
   const { kitId } = useParams();
   const [params] = useSearchParams();
   const { catalog, me } = useStore();
+  const navigate = useNavigate();
   const kit = catalog.kits.find((k) => k.id === kitId);
   const durationId = params.get('d') ?? (catalog.durations.find((d) => d.default) ?? catalog.durations[0]!).id;
   const duration = catalog.durations.find((d) => d.id === durationId);
@@ -44,7 +45,9 @@ export function Checkout() {
         method: 'POST',
         body: { kitId: kit.id, durationId: duration.id, provider: selected.id, acceptTerms: true },
       });
-      window.location.assign(res.redirectUrl);
+      // The demo build has no payment page: its stand-in API returns an in-app path.
+      if (import.meta.env.MODE === 'demo') navigate(res.redirectUrl);
+      else window.location.assign(res.redirectUrl);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Checkout could not start. Check your connection and try again.');
       setSubmitting(false);

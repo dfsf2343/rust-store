@@ -180,11 +180,16 @@ function PlayerLookup() {
   const [steamId, setSteamId] = useState<string | null>(null);
   const player = useApi<PlayerView>(steamId ? `/admin/players/${steamId}` : null);
   const { message, run } = useAction();
+  const [revoking, setRevoking] = useState<{ id: number; reason: string } | null>(null);
 
-  const revoke = async (id: number) => {
-    const reason = window.prompt('Reason for revoking this grant?');
-    if (!reason) return;
-    if (await run(() => api(`/admin/grants/${id}/revoke`, { method: 'POST', body: { reason } }), 'Grant revoked.')) player.reload();
+  const revoke = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!revoking || !revoking.reason.trim()) return;
+    const { id, reason } = revoking;
+    if (await run(() => api(`/admin/grants/${id}/revoke`, { method: 'POST', body: { reason: reason.trim() } }), 'Grant revoked.')) {
+      setRevoking(null);
+      player.reload();
+    }
   };
   const setBan = async (banned: boolean) => {
     if (steamId && (await run(() => api(`/admin/players/${steamId}/ban`, { method: 'POST', body: { banned } }), banned ? 'Player banned from the store.' : 'Player unbanned.'))) player.reload();
@@ -241,8 +246,28 @@ function PlayerLookup() {
                 {g.note ? `: ${g.note}` : ''}){' '}
                 {g.revokedAt ? (
                   <span className="muted">revoked: {g.revokedReason}</span>
+                ) : revoking?.id === g.id ? (
+                  <form className="revoke-form" onSubmit={(e) => void revoke(e)}>
+                    <label>
+                      <span className="visually-hidden">Reason for revoking grant {g.id}</span>
+                      <input
+                        id={`revoke-reason-${g.id}`}
+                        required
+                        maxLength={200}
+                        placeholder="Reason, for example chargeback"
+                        value={revoking.reason}
+                        onChange={(e) => setRevoking({ id: g.id, reason: e.target.value })}
+                      />
+                    </label>
+                    <button type="submit" className="button button--quiet button--small">
+                      Revoke grant
+                    </button>
+                    <button type="button" className="link-button" onClick={() => setRevoking(null)}>
+                      Cancel
+                    </button>
+                  </form>
                 ) : (
-                  <button type="button" className="link-button" onClick={() => void revoke(g.id)}>
+                  <button type="button" className="link-button" onClick={() => setRevoking({ id: g.id, reason: '' })}>
                     Revoke
                   </button>
                 )}

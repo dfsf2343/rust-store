@@ -56,8 +56,11 @@
   box-sizing: border-box;
 }
 
-html {
+:root {
   color-scheme: dark;
+}
+
+html {
   -webkit-text-size-adjust: 100%;
 }
 
@@ -1896,6 +1899,30 @@ code {
 .plain-list li {
   padding: 4px 0;
   color: var(--chalk-2);
+}
+
+/* Inline reason form for revoking a grant in the admin player view. */
+.revoke-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.revoke-form label {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
+.revoke-form input {
+  width: 100%;
+  font: inherit;
+  padding: 6px 10px;
+  color: var(--chalk);
+  background: var(--tarmac);
+  border: 1px solid var(--curb);
+  border-radius: 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {

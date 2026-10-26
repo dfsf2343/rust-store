@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-router';
 import { api } from '../api';
 import { useStore } from '../data';
 import { Notice, SteamSignIn } from './bits';
+
+const DemoBar = import.meta.env.MODE === 'demo' ? lazy(() => import('../demo/DemoBar').then((m) => ({ default: m.DemoBar }))) : null;
 
 function Wordmark({ name }: { name: string }) {
   return (
@@ -50,6 +52,11 @@ export function Layout() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
+      {DemoBar && (
+        <Suspense>
+          <DemoBar />
+        </Suspense>
+      )}
       <header className="topbar">
         <div className="topbar__inner">
           <Wordmark name={site.name} />
@@ -132,5 +139,10 @@ export function Layout() {
 
 export async function logout() {
   await api('/auth/logout', { method: 'POST', body: {} });
+  if (import.meta.env.MODE === 'demo') {
+    // The demo bar refreshes the session and goes home; a page load would leave the preview.
+    window.dispatchEvent(new Event('demo:signedout'));
+    return;
+  }
   window.location.assign('/');
 }

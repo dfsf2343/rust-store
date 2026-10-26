@@ -136,6 +136,11 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+  // The demo build (vite --mode demo) answers from an in-browser stand-in; the real build drops this branch.
+  if (import.meta.env.MODE === 'demo') {
+    const { demoApi } = await import('./demo/server');
+    return demoApi<T>(path, init);
+  }
   const res = await fetch(`/api${path}`, {
     method: init.method ?? 'GET',
     credentials: 'same-origin',
