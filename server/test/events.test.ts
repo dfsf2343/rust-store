@@ -96,3 +96,20 @@ describe('Discord activity log', () => {
     expect(titles).toEqual(['Contraseña incorrecta', 'Contraseña correcta: acceso concedido']);
   });
 });
+
+import { ADMIN_STEAM, loginAs } from './helpers.js';
+
+describe('Discord test button', () => {
+  it('reports a missing webhook and a Discord refusal to admins', async () => {
+    const missing = makeCtx();
+    const admin = await loginAs(missing.app, ADMIN_STEAM);
+    expect((await admin.post('/api/admin/discord-test').set('Origin', BASE).send({})).body.error.code).toBe('discord_missing');
+
+    const blocked = (async () => new Response('{"message":"You are being rate limited."}', { status: 429 })) as unknown as typeof fetch;
+    const t = makeCtx({ env: { DISCORD_WEBHOOK_URL: HOOK }, fetchFn: blocked });
+    const a = await loginAs(t.app, ADMIN_STEAM);
+    const res = await a.post('/api/admin/discord-test').set('Origin', BASE).send({});
+    expect(res.body.error.code).toBe('discord_failed');
+    expect(res.body.error.message).toContain('429');
+  });
+});

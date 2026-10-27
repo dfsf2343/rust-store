@@ -561,6 +561,7 @@ on('GET', /^\/admin\/overview$/, () => {
       geoipReady: true,
       geoHeader: 'x-store-country',
       pluginConfigured: true,
+      discordLog: 'on',
       warnings: [],
       catalogVersion: 'demo',
     },
@@ -661,6 +662,11 @@ on('POST', /^\/admin\/players\/(\d+)\/ban$/, (m, _q, body) => {
 on('POST', /^\/admin\/reload$/, () => {
   requireAdmin();
   throw new ApiError(409, 'On Cloudflare the config files are part of the deploy. Edit them in the GitHub repository and the site redeploys.', 'config_bundled');
+});
+
+on('POST', /^\/admin\/discord-test$/, () => {
+  requireAdmin();
+  return { ok: true };
 });
 
 /** Same contract as api(): resolves with the JSON body or rejects with ApiError. */

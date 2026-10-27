@@ -62,6 +62,7 @@ export function adminRoutes(ctx: AppContext): Router {
         geoipReady: ctx.geo.ready,
         geoHeader: ctx.config.geo.header,
         pluginConfigured: ctx.config.pluginSecret !== null,
+        discordLog: ctx.config.discordWebhookState,
         warnings: ctx.config.warnings,
         catalogVersion: content.catalogVersion,
       },
@@ -102,6 +103,22 @@ export function adminRoutes(ctx: AppContext): Router {
     await provider.refresh(order);
     audit(ctx.db, req.user!.steam_id, 'admin.order.refresh', order.id, undefined, ctx.now());
     res.json(orderView(ctx.orders.get(order.id)!, ctx.content()));
+  });
+
+  router.post('/admin/discord-test', async (_req, res) => {
+    const state = ctx.config.discordWebhookState;
+    if (state === 'missing') throw new HttpError(409, 'DISCORD_WEBHOOK_URL is not set in Cloudflare (Settings > Variables and Secrets).', 'discord_missing');
+    if (state === 'invalid') throw new HttpError(409, 'DISCORD_WEBHOOK_URL is not a Discord webhook link. Copy it again from Discord.', 'discord_invalid');
+    const result = await ctx.events.test?.();
+    if (!result) throw new HttpError(409, 'The Discord log is off.', 'discord_off');
+    if (result.status >= 200 && result.status < 300) return void res.json({ ok: true });
+    const reason =
+      result.status === 429
+        ? 'Discord is rate limiting or blocking messages from Cloudflare (429).'
+        : result.status === 401 || result.status === 404
+          ? 'Discord says this webhook does not exist. Create a new one and update DISCORD_WEBHOOK_URL.'
+          : `Discord answered ${result.status || 'nothing'}.`;
+    throw new HttpError(502, `${reason} ${result.body}`.trim(), 'discord_failed');
   });
 
   // Delivers an order held for review (amount mismatch) after staff checked the payment in the provider dashboard.

@@ -73,6 +73,7 @@ export interface AppConfig {
   allowedIps: string | null;
   /** Discord webhook that receives the activity log (events.ts). */
   discordWebhookUrl: string | null;
+  discordWebhookState: 'on' | 'invalid' | 'missing';
   stripe: { secretKey: string; webhookSecret: string | null; apiBase: URL | null } | null;
   paypal: { clientId: string; clientSecret: string; env: 'sandbox' | 'live' } | null;
   mercadopago: { accessToken: string; webhookSecret: string | null; useSandboxUrl: boolean } | null;
@@ -230,6 +231,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     accessPassword: e.ACCESS_PASSWORD ?? null,
     allowedIps: e.ALLOWED_IPS ?? null,
     discordWebhookUrl,
+    discordWebhookState: discordWebhookUrl ? 'on' : e.DISCORD_WEBHOOK_URL ? 'invalid' : 'missing',
     stripe,
     paypal,
     mercadopago,

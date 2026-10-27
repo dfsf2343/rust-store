@@ -47,6 +47,8 @@ export type SiteEvent =
 
 export interface EventLog {
   emit(event: SiteEvent): Promise<void>;
+  /** Sends a test message right away and reports what Discord answered. */
+  test?(): Promise<{ status: number; body: string }>;
 }
 
 export const noEventLog: EventLog = { emit: async () => {} };
@@ -211,6 +213,20 @@ export class DiscordEventLog implements EventLog {
     private readonly now: () => number,
     private readonly siteName: string,
   ) {}
+
+  async test(): Promise<{ status: number; body: string }> {
+    try {
+      const res = await this.fetchFn(this.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: `${this.siteName} log`.slice(0, 80), content: 'Mensaje de prueba: el log de la tienda está conectado.', allowed_mentions: { parse: [] } }),
+        signal: AbortSignal.timeout(8000),
+      });
+      return { status: res.status, body: (await res.text().catch(() => '')).slice(0, 300) };
+    } catch (err) {
+      return { status: 0, body: (err as Error).message };
+    }
+  }
 
   async emit(event: SiteEvent): Promise<void> {
     const now = this.now();

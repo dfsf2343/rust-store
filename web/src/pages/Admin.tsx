@@ -23,6 +23,7 @@ interface Overview {
     geoipReady: boolean;
     geoHeader: string | null;
     pluginConfigured: boolean;
+    discordLog?: 'on' | 'invalid' | 'missing';
     warnings: string[];
     catalogVersion: string;
   };
@@ -370,7 +371,18 @@ export function Admin() {
                         : 'IP database not loaded yet'}
                 </li>
                 <li>Plugin secret: {o.system.pluginConfigured ? 'set' : 'missing'}</li>
+                <li>
+                  Discord log:{' '}
+                  {o.system.discordLog === 'on' ? 'on' : o.system.discordLog === 'invalid' ? 'link is not a Discord webhook' : 'DISCORD_WEBHOOK_URL not set'}
+                </li>
               </ul>
+              <button
+                type="button"
+                className="button button--quiet button--small"
+                onClick={() => void run(() => api('/admin/discord-test', { method: 'POST', body: {} }), 'Test message sent. Check the Discord channel.')}
+              >
+                Send Discord test message
+              </button>
               {o.system.runtime === 'cloudflare' ? (
                 <p className="muted">Kits, prices and texts live in the config folder of the GitHub repository. Edit them there and the site redeploys in about a minute.</p>
               ) : (
