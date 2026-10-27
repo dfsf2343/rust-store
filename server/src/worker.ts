@@ -10,6 +10,7 @@ import { DurableObject } from 'cloudflare:workers';
 import catalog from '../../config/catalog.json' with { type: 'json' };
 import payments from '../../config/payments.json' with { type: 'json' };
 import site from '../../config/site.json' with { type: 'json' };
+import { gate } from './access.js';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { parseContent } from './content.js';
@@ -34,6 +35,7 @@ interface Env {
   BASE_URL?: string;
   LOG_LEVEL?: string;
   NODE_ENV?: string;
+  ACCESS_PASSWORD?: string;
 }
 
 function stringVars(env: object): Record<string, string> {
@@ -133,6 +135,12 @@ function forward(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request, env) {
+    // Members-only mode: nothing (pages, files or API) is served without the access cookie.
+    const password = env.ACCESS_PASSWORD?.trim();
+    if (password) {
+      const blocked = await gate(request, password, content.site.name, Math.floor(Date.now() / 1000));
+      if (blocked) return blocked;
+    }
     const { pathname } = new URL(request.url);
     if (pathname === '/api' || pathname.startsWith('/api/')) return forward(request, env);
     return env.ASSETS.fetch(request);

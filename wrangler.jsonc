@@ -18,7 +18,8 @@
     "directory": "web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    // Every request goes through the Worker so the members-only gate (ACCESS_PASSWORD) covers files too.
+    "run_worker_first": true
   },
   // The database: one SQLite-backed Durable Object.
   "durable_objects": {

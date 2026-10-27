@@ -26,6 +26,7 @@ const EnvSchema = z.object({
   STEAM_API_KEY: optionalString,
   ADMIN_STEAM_IDS: optionalString,
   PLUGIN_SECRET: optionalString,
+  ACCESS_PASSWORD: optionalString,
   STRIPE_SECRET_KEY: optionalString,
   STRIPE_WEBHOOK_SECRET: optionalString,
   STRIPE_API_BASE: optionalString,
@@ -63,6 +64,8 @@ export interface AppConfig {
   steamApiKey: string | null;
   adminSteamIds: Set<string>;
   pluginSecret: string | null;
+  /** Members-only password for the whole site (access.ts). Null means the site is public. */
+  accessPassword: string | null;
   stripe: { secretKey: string; webhookSecret: string | null; apiBase: URL | null } | null;
   paypal: { clientId: string; clientSecret: string; env: 'sandbox' | 'live' } | null;
   mercadopago: { accessToken: string; webhookSecret: string | null; useSandboxUrl: boolean } | null;
@@ -136,6 +139,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   if (!e.PLUGIN_SECRET) warnings.push('PLUGIN_SECRET is not set: the game server plugin cannot connect.');
 
+  if (e.ACCESS_PASSWORD && e.ACCESS_PASSWORD.length < 8) {
+    throw new Error('ACCESS_PASSWORD must be at least 8 characters long.');
+  }
+
   let stripeApiBase: URL | null = null;
   if (e.STRIPE_API_BASE) {
     // Only for local testing against a mock Stripe API.
@@ -207,6 +214,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     steamApiKey: e.STEAM_API_KEY ?? null,
     adminSteamIds,
     pluginSecret: e.PLUGIN_SECRET ?? null,
+    accessPassword: e.ACCESS_PASSWORD ?? null,
     stripe,
     paypal,
     mercadopago,
