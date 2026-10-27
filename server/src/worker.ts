@@ -108,6 +108,27 @@ export class StoreObject extends DurableObject<Env> {
     return handleAsNodeRequest(this.port, request);
   }
 
+  // Wrong access passwords per address: 10 within 15 minutes locks that address for 15 minutes.
+  private readonly accessFailures = new Map<string, { count: number; since: number }>();
+
+  async accessBlocked(ip: string): Promise<boolean> {
+    const entry = this.accessFailures.get(ip);
+    if (!entry) return false;
+    if (Date.now() - entry.since > 15 * 60_000) {
+      this.accessFailures.delete(ip);
+      return false;
+    }
+    return entry.count >= 10;
+  }
+
+  async accessFailed(ip: string): Promise<void> {
+    const now = Date.now();
+    const entry = this.accessFailures.get(ip);
+    if (!entry || now - entry.since > 15 * 60_000) this.accessFailures.set(ip, { count: 1, since: now });
+    else entry.count += 1;
+    if (this.accessFailures.size > 10_000) this.accessFailures.clear();
+  }
+
   /** Cron trigger: expire abandoned checkouts, prune old rows, re-check pending payments. */
   async housekeeping(): Promise<{ expired: number; checked: number }> {
     const appCtx = this.context(null);
@@ -146,7 +167,9 @@ export default {
     // Members-only mode: nothing (pages, files or API) is served without the access cookie.
     const password = env.ACCESS_PASSWORD?.trim();
     if (password) {
-      const blocked = await gate(request, password, content.site.name, Math.floor(Date.now() / 1000));
+      const store = env.STORE.get(env.STORE.idFromName(STORE_NAME));
+      const limiter = { isBlocked: (ip: string) => store.accessBlocked(ip), recordFailure: (ip: string) => store.accessFailed(ip) };
+      const blocked = await gate(request, password, content.site.name, Math.floor(Date.now() / 1000), limiter);
       if (blocked) return blocked;
     }
     const { pathname } = new URL(request.url);

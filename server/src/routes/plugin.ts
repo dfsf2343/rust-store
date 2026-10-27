@@ -69,13 +69,14 @@ export function pluginRoutes(ctx: AppContext): Router {
 
   router.post('/sync', express.text({ type: '*/*', limit: '512kb' }), (req, res) => {
     const secret = ctx.config.pluginSecret;
-    if (!secret) return res.status(503).json({ error: 'PLUGIN_SECRET is not configured on the website' });
+    if (!secret) return res.status(503).json({ error: 'unavailable' });
     const raw = typeof req.body === 'string' ? req.body : '';
     const now = ctx.now();
     const check = verifyRequest(secret, req.get('x-store-timestamp'), req.get('x-store-signature'), raw, now);
     if (!check.ok) {
       ctx.log.warn({ reason: check.reason, ip: req.ip }, 'Rejected plugin sync');
-      return res.status(401).json({ error: check.reason });
+      // The reason stays in the server log; callers only learn that it failed.
+      return res.status(401).json({ error: 'unauthorized' });
     }
     let parsedJson: unknown;
     try {

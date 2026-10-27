@@ -12,7 +12,7 @@ export function webhookRoutes(ctx: AppContext): Router {
 
   router.post('/stripe', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
     const stripe = ctx.providers.stripe;
-    if (!stripe || !stripe.webhooksEnabled) return res.status(404).json({ error: 'stripe webhooks not configured' });
+    if (!stripe || !stripe.webhooksEnabled) return res.status(404).json({ error: 'not found' });
     let event: Stripe.Event;
     try {
       event = await stripe.verifyEvent(req.body as Buffer, req.get('stripe-signature'));
@@ -33,7 +33,7 @@ export function webhookRoutes(ctx: AppContext): Router {
 
   router.post('/paypal', limiter(60, 120), express.json({ limit: '256kb' }), async (req, res) => {
     const paypal = ctx.providers.paypal;
-    if (!paypal) return res.status(404).json({ error: 'paypal not configured' });
+    if (!paypal) return res.status(404).json({ error: 'not found' });
     const body = (req.body ?? {}) as { id?: string; event_type?: string; resource?: Record<string, unknown> };
     const eventId = typeof body.id === 'string' ? body.id.slice(0, 64) : null;
     if (eventId && seen.get('paypal', eventId)) return res.json({ received: true, duplicate: true });
@@ -49,7 +49,7 @@ export function webhookRoutes(ctx: AppContext): Router {
 
   router.post('/mercadopago', limiter(60, 120), express.json({ limit: '256kb' }), async (req, res) => {
     const mp = ctx.providers.mercadopago;
-    if (!mp) return res.status(404).json({ error: 'mercadopago not configured' });
+    if (!mp) return res.status(404).json({ error: 'not found' });
     const queryId = typeof req.query['data.id'] === 'string' ? (req.query['data.id'] as string) : undefined;
     try {
       mp.verifySignature({ xSignature: req.get('x-signature'), xRequestId: req.get('x-request-id') }, queryId);

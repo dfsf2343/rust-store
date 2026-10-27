@@ -127,7 +127,7 @@ function escapeHtml(s: string): string {
 }
 
 /** The page shown to anyone without access. Plain HTML form, no scripts. */
-export function gatePage(siteName: string, wrongPassword: boolean): string {
+export function gatePage(siteName: string, wrongPassword: boolean, locked = false): string {
   const name = escapeHtml(siteName);
   return `<!doctype html>
 <html lang="en">
@@ -160,6 +160,7 @@ input:focus-visible, button:focus-visible { outline: 3px solid #f2c230; outline-
 <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200" autofocus>
 </label>
 ${wrongPassword ? '<p class="error" role="alert">That password is not right. Check it with the server staff.</p>' : ''}
+${locked ? '<p class="error" role="alert">Too many wrong passwords from this connection. Try again in 15 minutes.</p>' : ''}
 <button type="submit">Enter</button>
 </form>
 </main>
@@ -180,7 +181,13 @@ const GATE_HEADERS = {
  * Handles the gate for one request. Returns a Response when the request must stop here
  * (gate page, refusal or the password form), or null when it may continue.
  */
-export async function gate(request: Request, password: string, siteName: string, nowSeconds: number): Promise<Response | null> {
+/** Counts wrong passwords per address. The Worker keeps the counters in the Durable Object. */
+export interface AttemptLimiter {
+  isBlocked(ip: string): Promise<boolean>;
+  recordFailure(ip: string): Promise<void>;
+}
+
+export async function gate(request: Request, password: string, siteName: string, nowSeconds: number, limiter?: AttemptLimiter): Promise<Response | null> {
   const url = new URL(request.url);
   const ip = request.headers.get('cf-connecting-ip');
   const secure = url.protocol === 'https:';
@@ -188,6 +195,10 @@ export async function gate(request: Request, password: string, siteName: string,
     // Same-site form posts only.
     const origin = request.headers.get('origin');
     if (origin && origin !== url.origin) return new Response('Forbidden', { status: 403 });
+    if (!ip) return new Response('Forbidden', { status: 403 });
+    if (limiter && (await limiter.isBlocked(ip))) {
+      return new Response(gatePage(siteName, false, true), { status: 429, headers: { ...GATE_HEADERS, 'Retry-After': '900' } });
+    }
     let attempt = '';
     try {
       const form = await request.formData();
@@ -195,9 +206,10 @@ export async function gate(request: Request, password: string, siteName: string,
     } catch {
       attempt = '';
     }
-    if (ip && (await passwordMatches(password, attempt))) {
+    if (await passwordMatches(password, attempt)) {
       return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure, ip), 'Cache-Control': 'no-store' } });
     }
+    await limiter?.recordFailure(ip);
     return new Response(gatePage(siteName, true), { status: 401, headers: GATE_HEADERS });
   }
   if (isOpenPath(url.pathname)) return null;
