@@ -71,6 +71,16 @@ export function Terms() {
         The server and store are provided as they are. We work to keep them online but do not guarantee uptime. To the extent the law allows, our liability for any purchase is limited
         to the amount you paid for it.
       </p>
+      <h2>Governing law</h2>
+      <p>
+        These terms are governed by the laws of the United States and of the U.S. state where {operatorName} is registered, without regard to conflict-of-law rules. Any dispute is
+        handled in the courts of that state, to the extent the law allows.
+      </p>
+      <h2>Immediate delivery</h2>
+      <p>
+        Kits are digital content delivered right after payment. By buying you ask for immediate delivery and accept that, once the kit is delivered, you lose any right to cancel or
+        withdraw from the purchase.
+      </p>
       <h2>Changes to these terms</h2>
       <p>We may update these terms. The version shown when you buy applies to that purchase.</p>
       <h2>Contact</h2>
@@ -114,8 +124,10 @@ export function Refunds() {
       </p>
       <h2>If a refund is approved</h2>
       <p>Refunds go back to the original payment method. The kit access bought with that payment is removed as soon as the refund is processed.</p>
-      <h2>Your legal rights</h2>
-      <p>Nothing in this policy limits rights you have under the consumer protection law that applies to you.</p>
+      <h2>Governing law</h2>
+      <p>
+        This policy is governed by the laws of the United States, as set out in the <Link to="/terms">terms of service</Link>.
+      </p>
     </LegalPage>
   );
 }

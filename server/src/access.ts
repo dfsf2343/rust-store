@@ -142,6 +142,10 @@ function policiesHtml(name: string): string {
 <p>Payments are processed by Stripe (shown on statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago. We never see your full card details. Payment providers may also apply their own buyer-protection rules.</p>
 <h2>Liability and age</h2>
 <p>The server and store are provided as they are, without a guarantee of uptime. To the extent the law allows, our liability for a purchase is limited to the amount paid for it. If you are under 18, you need permission from a parent or guardian to buy.</p>
+<h2>Governing law</h2>
+<p>These terms are governed by the laws of the United States and of the U.S. state where the operator of ${name} is registered, without regard to conflict-of-law rules. Any dispute is handled in the courts of that state, to the extent the law allows.</p>
+<h2>Immediate delivery</h2>
+<p>Kits are digital content delivered right after payment. By buying you ask for immediate delivery and accept that, once the kit is delivered, you lose any right to cancel or withdraw from the purchase.</p>
 <h2>Changes</h2>
 <p>We may update these terms. The version shown when you buy applies to that purchase.</p>
 </details>
@@ -152,7 +156,7 @@ function policiesHtml(name: string): string {
 <ul>
 <li>Changing your mind, wipes, bans, server rule changes or game updates are not reasons for a refund.</li>
 <li>To report a problem, open a ticket with the server staff within 14 days and include your order ID.</li>
-<li>Nothing in this policy limits rights you have under consumer protection law where you live.</li>
+<li>This policy is governed by the laws of the United States, as set out in the terms of service.</li>
 </ul>
 </details>`;
 }
