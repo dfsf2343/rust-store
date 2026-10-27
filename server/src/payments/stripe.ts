@@ -3,7 +3,7 @@ import type { Logger } from 'pino';
 import type { AppConfig } from '../config.js';
 import type { Content } from '../content.js';
 import { isFulfillable, type OrderRow, type OrderService } from '../store/orders.js';
-import type { CheckoutInput, CheckoutResult, ChargeQuote, PaymentProvider } from './types.js';
+import { ProviderError, type CheckoutInput, type CheckoutResult, type ChargeQuote, type PaymentProvider } from './types.js';
 
 type Session = Stripe.Checkout.Session;
 
@@ -63,7 +63,14 @@ export class StripeProvider implements PaymentProvider {
     if (opts.allowPromotionCodes) params.allow_promotion_codes = true;
     if (opts.automaticTax) params.automatic_tax = { enabled: true };
 
-    const session = await this.client.checkout.sessions.create(params, { idempotencyKey: `checkout-${order.id}` });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.client.checkout.sessions.create(params, { idempotencyKey: `checkout-${order.id}` });
+    } catch (err) {
+      // Surface Stripe's own reason (for example an account that cannot take payments yet) in the logs.
+      const e = err as { message?: string; statusCode?: number; code?: string; type?: string };
+      throw new ProviderError('stripe', `Stripe checkout failed: ${e.message ?? 'unknown error'}`, e.statusCode, { code: e.code, type: e.type });
+    }
     if (!session.url) throw new Error('Stripe did not return a checkout URL');
     return { providerRef: session.id, redirectUrl: session.url };
   }
