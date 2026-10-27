@@ -79,7 +79,7 @@ export function deviceCookie(id: string, secure: boolean): string {
 
 /** Short "Chrome 130 on Windows (desktop)" summary of a User-Agent string. */
 export function describeAgent(ua: string | null | undefined): string {
-  if (!ua) return 'desconocido';
+  if (!ua) return 'unknown';
   const browser =
     /Edg\/(\d+)/.exec(ua)?.[1] ? `Edge ${/Edg\/(\d+)/.exec(ua)![1]}` :
     /OPR\/(\d+)/.exec(ua)?.[1] ? `Opera ${/OPR\/(\d+)/.exec(ua)![1]}` :
@@ -120,18 +120,18 @@ function visitorFields(v: Visitor): Field[] {
   const place = [v.city, v.region, v.country].filter(Boolean).join(', ');
   const fields: Field[] = [
     { name: 'IP', value: code(v.ip), inline: true },
-    { name: 'Ubicación', value: place ? `${flag(v.country)}${code(place)}${v.postalCode ? ` ${code(v.postalCode, 12)}` : ''}` : '-', inline: true },
-    { name: 'Red / ISP', value: v.network || v.asn ? `${code(v.network, 80)}${v.asn ? ` AS${v.asn}` : ''}` : '-', inline: true },
-    { name: 'Navegador', value: code(describeAgent(v.userAgent)), inline: true },
+    { name: 'Location', value: place ? `${flag(v.country)}${code(place)}${v.postalCode ? ` ${code(v.postalCode, 12)}` : ''}` : '-', inline: true },
+    { name: 'Network', value: v.network || v.asn ? `${code(v.network, 80)}${v.asn ? ` AS${v.asn}` : ''}` : '-', inline: true },
+    { name: 'Browser', value: code(describeAgent(v.userAgent)), inline: true },
     {
-      name: 'Dispositivo',
-      value: v.deviceId ? `${code(v.deviceId)} ${v.newDevice ? '(nuevo)' : '(ya visto antes)'}` : '-',
+      name: 'Device',
+      value: v.deviceId ? `${code(v.deviceId)} ${v.newDevice ? '(first time seen)' : '(seen before)'}` : '-',
       inline: true,
     },
-    { name: 'Zona horaria', value: code(v.timezone), inline: true },
+    { name: 'Time zone', value: code(v.timezone), inline: true },
   ];
-  if (v.language) fields.push({ name: 'Idioma', value: code(v.language, 60), inline: true });
-  if (v.referrer) fields.push({ name: 'Viene de', value: code(v.referrer, 150), inline: true });
+  if (v.language) fields.push({ name: 'Language', value: code(v.language, 60), inline: true });
+  if (v.referrer) fields.push({ name: 'Came from', value: code(v.referrer, 150), inline: true });
   fields.push({ name: 'User agent', value: code(v.userAgent, 300) });
   return fields;
 }
@@ -142,12 +142,12 @@ function steamLink(steamId: string): string {
 
 function orderFields(o: OrderSummary): Field[] {
   return [
-    { name: 'Jugador', value: steamLink(o.steamId), inline: true },
+    { name: 'Player', value: steamLink(o.steamId), inline: true },
     { name: 'Kit', value: code(`${o.kitName} (${o.durationLabel})`), inline: true },
-    { name: 'Monto', value: code(o.amount), inline: true },
-    { name: 'Método', value: code(o.provider), inline: true },
-    { name: 'País', value: o.country ? `${flag(o.country)}${code(o.country)}` : '-', inline: true },
-    { name: 'Pedido', value: code(o.id), inline: true },
+    { name: 'Amount', value: code(o.amount), inline: true },
+    { name: 'Payment', value: code(o.provider), inline: true },
+    { name: 'Country', value: o.country ? `${flag(o.country)}${code(o.country)}` : '-', inline: true },
+    { name: 'Order', value: code(o.id), inline: true },
     ...(o.ip ? [{ name: 'IP', value: code(o.ip), inline: true }] : []),
   ];
 }
@@ -155,44 +155,44 @@ function orderFields(o: OrderSummary): Field[] {
 const COLORS = { green: 0x2ecc71, red: 0xe74c3c, orange: 0xe67e22, grey: 0x95a5a6, blue: 0x3498db, gold: 0xf1c40f, purple: 0x9b59b6, teal: 0x1abc9c };
 
 export function toEmbed(e: SiteEvent, nowSeconds: number): { title: string; color: number; fields: Field[]; timestamp: string } {
-  const when: Field = { name: 'Hora', value: `<t:${nowSeconds}:F> (<t:${nowSeconds}:R>)` };
+  const when: Field = { name: 'When', value: `<t:${nowSeconds}:F> (<t:${nowSeconds}:R>)` };
   const timestamp = new Date(nowSeconds * 1000).toISOString();
   const base = (title: string, color: number, fields: Field[]) => ({ title, color, fields: [...fields, when].slice(0, 25), timestamp });
   switch (e.type) {
     case 'access.granted':
-      return base('Contraseña correcta: acceso concedido', COLORS.green, visitorFields(e.visitor));
+      return base('Correct password: access granted', COLORS.green, visitorFields(e.visitor));
     case 'access.denied':
-      return base('Contraseña incorrecta', COLORS.red, visitorFields(e.visitor));
+      return base('Wrong password', COLORS.red, visitorFields(e.visitor));
     case 'access.locked':
-      return base('Bloqueado 15 minutos por 10 contraseñas incorrectas', COLORS.orange, visitorFields(e.visitor));
+      return base('Blocked for 15 minutes after 10 wrong passwords', COLORS.orange, visitorFields(e.visitor));
     case 'access.page':
-      return base('Visita sin acceso (vio la página de contraseña)', COLORS.grey, [{ name: 'Ruta', value: code(e.path), inline: true }, ...visitorFields(e.visitor)]);
+      return base('Visit without access (password page shown)', COLORS.grey, [{ name: 'Path', value: code(e.path), inline: true }, ...visitorFields(e.visitor)]);
     case 'member.visit':
-      return base('Miembro entró a la página', COLORS.teal, [{ name: 'Ruta', value: code(e.path), inline: true }, ...visitorFields(e.visitor)]);
+      return base('Member opened the site', COLORS.teal, [{ name: 'Path', value: code(e.path), inline: true }, ...visitorFields(e.visitor)]);
     case 'login.ok':
-      return base(e.firstLogin ? 'Jugador nuevo inició sesión con Steam' : 'Jugador inició sesión con Steam', COLORS.blue, [
-        { name: 'Jugador', value: steamLink(e.steamId), inline: true },
-        { name: 'Nombre en Steam', value: code(e.name, 64), inline: true },
+      return base(e.firstLogin ? 'New player signed in with Steam' : 'Player signed in with Steam', COLORS.blue, [
+        { name: 'Player', value: steamLink(e.steamId), inline: true },
+        { name: 'Steam name', value: code(e.name, 64), inline: true },
         ...visitorFields(e.visitor),
       ]);
     case 'login.failed':
-      return base('Falló el inicio de sesión con Steam', COLORS.orange, [{ name: 'Motivo', value: code(e.reason), inline: true }, ...visitorFields(e.visitor)]);
+      return base('Steam sign-in failed', COLORS.orange, [{ name: 'Reason', value: code(e.reason), inline: true }, ...visitorFields(e.visitor)]);
     case 'checkout.started':
-      return base('Inició un pago', COLORS.blue, [...orderFields(e.order), ...visitorFields(e.visitor)]);
+      return base('Checkout started', COLORS.blue, [...orderFields(e.order), ...visitorFields(e.visitor)]);
     case 'order.paid':
-      return base('Compra completada', COLORS.gold, [...orderFields(e.order), { name: 'Recibido', value: code(e.paid), inline: true }, { name: 'Por', value: code(e.actor), inline: true }]);
+      return base('Purchase completed', COLORS.gold, [...orderFields(e.order), { name: 'Received', value: code(e.paid), inline: true }, { name: 'By', value: code(e.actor), inline: true }]);
     case 'order.refunded':
-      return base('Reembolso: acceso quitado', COLORS.purple, [...orderFields(e.order), { name: 'Detalle', value: code(e.detail, 300) }]);
+      return base('Refund: access removed', COLORS.purple, [...orderFields(e.order), { name: 'Detail', value: code(e.detail, 300) }]);
     case 'order.disputed':
-      return base('Contracargo o disputa: acceso quitado', COLORS.red, [...orderFields(e.order), { name: 'Detalle', value: code(e.detail, 300) }]);
+      return base('Chargeback or dispute: access removed', COLORS.red, [...orderFields(e.order), { name: 'Detail', value: code(e.detail, 300) }]);
     case 'order.review':
-      return base('Pedido requiere revisión manual', COLORS.orange, [...orderFields(e.order), { name: 'Detalle', value: code(e.detail, 300) }]);
+      return base('Order needs manual review', COLORS.orange, [...orderFields(e.order), { name: 'Detail', value: code(e.detail, 300) }]);
     case 'admin.grant':
     case 'admin.revoke':
-      return base(e.type === 'admin.grant' ? 'Admin regaló un kit' : 'Admin quitó un kit', COLORS.purple, [
+      return base(e.type === 'admin.grant' ? 'Admin granted a kit' : 'Admin revoked a kit', COLORS.purple, [
         { name: 'Admin', value: steamLink(e.admin), inline: true },
-        { name: 'Jugador', value: steamLink(e.steamId), inline: true },
-        { name: 'Detalle', value: code(e.detail, 300) },
+        { name: 'Player', value: steamLink(e.steamId), inline: true },
+        { name: 'Detail', value: code(e.detail, 300) },
       ]);
   }
 }
@@ -219,7 +219,7 @@ export class DiscordEventLog implements EventLog {
       const res = await this.fetchFn(this.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: `${this.siteName} log`.slice(0, 80), content: 'Mensaje de prueba: el log de la tienda está conectado.', allowed_mentions: { parse: [] } }),
+        body: JSON.stringify({ username: `${this.siteName} log`.slice(0, 80), content: 'Test message: the store activity log is connected.', allowed_mentions: { parse: [] } }),
         signal: AbortSignal.timeout(8000),
       });
       return { status: res.status, body: (await res.text().catch(() => '')).slice(0, 300) };
@@ -246,7 +246,7 @@ export class DiscordEventLog implements EventLog {
     }
     this.window.count += 1;
     const embed = toEmbed(event, now);
-    const content = this.dropped > 0 ? `${this.dropped} eventos más no se enviaron por el límite de Discord.` : undefined;
+    const content = this.dropped > 0 ? `${this.dropped} more events were not sent because of the Discord rate limit.` : undefined;
     this.dropped = 0;
     try {
       const res = await this.fetchFn(`${this.url}?wait=false`, {

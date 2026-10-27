@@ -57,7 +57,7 @@ describe('Discord activity log', () => {
       { type: 'order.paid', order: { id: 'ord_1', steamId: '76561198000000002', kitName: 'Warlord', durationLabel: '30 days', amount: '$50', provider: 'stripe', country: 'US' }, paid: '$50', actor: 'system' },
       1_800_000_000,
     );
-    expect(embed.title).toBe('Compra completada');
+    expect(embed.title).toBe('Purchase completed');
     expect(JSON.stringify(embed)).toContain('steamcommunity.com/profiles/76561198000000002');
     expect(describeAgent(visitor.userAgent)).toBe('Chrome 130 on Windows (desktop)');
     expect(describeAgent('curl/8.5.0')).toContain('script');
@@ -93,7 +93,7 @@ describe('Discord activity log', () => {
     await supertest(app).post('/api/access').set('Origin', BASE).type('form').send({ password: 'Tr4v3l-Gr1d9' });
     await new Promise((r) => setTimeout(r, 20));
     const titles = calls.filter((c) => c.url.startsWith(HOOK)).map((c) => c.body.embeds[0].title);
-    expect(titles).toEqual(['Contraseña incorrecta', 'Contraseña correcta: acceso concedido']);
+    expect(titles).toEqual(['Wrong password', 'Correct password: access granted']);
   });
 });
 
