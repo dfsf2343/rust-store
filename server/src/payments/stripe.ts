@@ -45,6 +45,8 @@ export class StripeProvider implements PaymentProvider {
             product_data: {
               name: `${kit.name} Kit (${duration.label})`,
               ...(kit.tagline ? { description: kit.tagline } : {}),
+              // Required by Stripe Managed Payments: video game content with permanent or time-limited rights.
+              tax_code: duration.days === null ? 'txcd_10201000' : 'txcd_10201001',
               metadata: { kitId: kit.id, durationId: duration.id },
             },
           },
