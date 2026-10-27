@@ -120,7 +120,7 @@ export function Checkout() {
           <label className="consent">
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             <span>
-              I agree to the <Link to="/terms">terms of service</Link> and the <Link to="/refunds">refund policy</Link>. Kits are digital items delivered in game.
+              I agree to the <Link to="/terms">terms of service</Link> and the <Link to="/refunds">refund policy</Link>. Kits are digital items delivered in game. All purchases are final.
             </span>
           </label>
 

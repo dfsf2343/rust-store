@@ -22,7 +22,13 @@ export function Terms() {
     <LegalPage title="Terms of service">
       <p>
         These terms cover the {site.name} website and store. {operatorName} runs {site.name}, a community Rust server. {site.name} is not affiliated with or endorsed by Facepunch
-        Studios. By signing in or buying anything you agree to these terms and to the <Link to="/rules">server rules</Link>.
+        Studios. By entering the access password, signing in or buying anything you agree to these terms, the <Link to="/refunds">refund policy</Link> and the{' '}
+        <Link to="/rules">server rules</Link>.
+      </p>
+      <h2>Who can use the store</h2>
+      <p>
+        The website and store are only for players authorized by the {site.name} staff. Purchases by anyone else are prohibited: the access is removed and the order is not refunded,
+        except where the law requires it. Do not share the access password.
       </p>
       <h2>Your account</h2>
       <p>You sign in with Steam. Purchases are tied to the Steam account you were signed in with when you paid and cannot be moved to another account.</p>
@@ -36,28 +42,37 @@ export function Terms() {
         Access starts automatically once the payment provider confirms your payment, usually within a minute. You claim kits in game with the chat command shown on your account page.
         Buying the same kit again adds the new access time after your current access ends.
       </p>
+      <h2>All sales are final</h2>
+      <p>
+        Every purchase is final and non-refundable. The only exception is an internal problem on our server that stops you from receiving or using what you bought, as described in the{' '}
+        <Link to="/refunds">refund policy</Link>.
+      </p>
       <h2>Changes to the server</h2>
       <p>
         Rust is a live game. We may change kit contents, cooldowns, gameplay settings and the wipe schedule, and Facepunch updates can change items. Map and blueprint wipes remove items
-        you have already claimed. If we permanently close the server, active access ends with it.
+        you have already claimed. None of this is a reason for a refund. If we permanently close the server, active access ends with it.
       </p>
       <h2>Rules and bans</h2>
       <p>Buying a kit does not exempt anyone from the rules. If you are banned for breaking them you lose access to purchased kits without a refund.</p>
       <h2>Payments</h2>
       <p>
-        Payments are processed by Stripe, PayPal or Mercado Pago depending on where you are. We never see or store your full card details. Prices are set in US dollars; Mercado Pago
-        charges are converted to local currency at the rate shown at checkout.
+        Payments are processed by Stripe (shown on card statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago, depending on where you are. We never see or store your full card
+        details. Prices are set in US dollars; Mercado Pago charges are converted to local currency at the rate shown at checkout. Payment providers may also apply their own
+        buyer-protection rules.
       </p>
-      <h2>Disputes and chargebacks</h2>
+      <h2>Chargebacks</h2>
       <p>
-        If something is wrong with an order, contact us first and we will fix it or refund it under the <Link to="/refunds">refund policy</Link>. Opening a chargeback or payment dispute
-        pauses the access bought with that payment while it is reviewed.
+        Contact the staff before opening a chargeback or payment dispute. A chargeback removes the access bought with that payment and can block the account from future purchases.
       </p>
+      <h2>Age</h2>
+      <p>If you are under 18, you need permission from a parent or guardian to buy.</p>
       <h2>No warranty</h2>
       <p>
         The server and store are provided as they are. We work to keep them online but do not guarantee uptime. To the extent the law allows, our liability for any purchase is limited
         to the amount you paid for it.
       </p>
+      <h2>Changes to these terms</h2>
+      <p>We may update these terms. The version shown when you buy applies to that purchase.</p>
       <h2>Contact</h2>
       <p>
         Questions about these terms: <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
@@ -71,14 +86,22 @@ export function Refunds() {
   const { contactEmail } = site.legal;
   return (
     <LegalPage title="Refund policy">
-      <p>Kits are digital items that are delivered right after payment, so purchases are generally final once the access is active.</p>
-      <h2>When we refund</h2>
+      <p>
+        <strong>All purchases are final and non-refundable.</strong>
+      </p>
+      <h2>The only exception</h2>
+      <p>
+        We refund only when an internal problem on our server stops you from receiving or using what you bought, for example a kit that never reached your account because of an error on
+        our side. Staff check each case. If the problem is confirmed we either fix the delivery or refund the purchase.
+      </p>
+      <h2>Not a reason for a refund</h2>
       <ul>
-        <li>You were charged but the kit never became available on your account and we cannot fix it.</li>
-        <li>You were charged twice for the same order.</li>
-        <li>A refund is required by the consumer protection law that applies to you.</li>
+        <li>Changing your mind after buying.</li>
+        <li>Wipes, game updates, or changes to kits, cooldowns or server settings.</li>
+        <li>Bans or other action taken for breaking the server rules.</li>
+        <li>Buying while not being an authorized member of the server.</li>
       </ul>
-      <h2>How to ask for one</h2>
+      <h2>How to report a problem</h2>
       <p>
         Email <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
         {site.links.discord && (
@@ -89,10 +112,10 @@ export function Refunds() {
         )}{' '}
         within 14 days of the purchase. Include the order ID from your account page and the Steam account you used.
       </p>
-      <h2>What happens after a refund</h2>
+      <h2>If a refund is approved</h2>
       <p>Refunds go back to the original payment method. The kit access bought with that payment is removed as soon as the refund is processed.</p>
-      <h2>Chargebacks</h2>
-      <p>Please contact us before opening a chargeback. A chargeback pauses the related access, and repeated chargebacks may block the account from future purchases.</p>
+      <h2>Your legal rights</h2>
+      <p>Nothing in this policy limits rights you have under the consumer protection law that applies to you.</p>
     </LegalPage>
   );
 }

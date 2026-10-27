@@ -126,6 +126,37 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
+/** Terms and refund policy, shown on the gate page. Keep in line with web/src/pages/Legal.tsx. */
+function policiesHtml(name: string): string {
+  return `<details>
+<summary>Terms of service</summary>
+<h2>Who can use the store</h2>
+<p>The ${name} website and store are only for players authorized by the ${name} staff. By entering the access password, signing in or buying anything you confirm that you are authorized and agree to these terms and the server rules. Purchases by anyone else are prohibited: the access is removed and the order is not refunded, except where the law requires it.</p>
+<h2>What you buy</h2>
+<p>A kit gives your Steam account the right to claim that kit in game on our server, once per cooldown, for the access length you chose. Kits are virtual items with no cash value. They cannot be resold, transferred to another account or exchanged for money. Lifetime access lasts for as long as we run the server and store.</p>
+<h2>Delivery and server changes</h2>
+<p>Access starts automatically once the payment is confirmed. Rust is a live game: we may change kit contents, cooldowns, settings and the wipe schedule, and wipes remove items already claimed. If the server closes permanently, active access ends with it.</p>
+<h2>Rules, bans and chargebacks</h2>
+<p>Buying a kit does not exempt anyone from the server rules. A ban for breaking them removes access to purchased kits without a refund. Opening a chargeback or payment dispute removes the access bought with that payment and can block the account from the store.</p>
+<h2>Payments</h2>
+<p>Payments are processed by Stripe (shown on statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago. We never see your full card details. Payment providers may also apply their own buyer-protection rules.</p>
+<h2>Liability and age</h2>
+<p>The server and store are provided as they are, without a guarantee of uptime. To the extent the law allows, our liability for a purchase is limited to the amount paid for it. If you are under 18, you need permission from a parent or guardian to buy.</p>
+<h2>Changes</h2>
+<p>We may update these terms. The version shown when you buy applies to that purchase.</p>
+</details>
+<details>
+<summary>Refund policy</summary>
+<p>All purchases are final and non-refundable.</p>
+<p>The only exception is an internal problem on our server that stops you from receiving or using what you bought, such as a kit that never reached your account because of an error on our side. Staff check each case, and if it is confirmed we either fix the delivery or refund the purchase.</p>
+<ul>
+<li>Changing your mind, wipes, bans, server rule changes or game updates are not reasons for a refund.</li>
+<li>To report a problem, open a ticket with the server staff within 14 days and include your order ID.</li>
+<li>Nothing in this policy limits rights you have under consumer protection law where you live.</li>
+</ul>
+</details>`;
+}
+
 /** The page shown to anyone without access. Plain HTML form, no scripts. */
 export function gatePage(siteName: string, wrongPassword: boolean, locked = false): string {
   const name = escapeHtml(siteName);
@@ -140,7 +171,7 @@ export function gatePage(siteName: string, wrongPassword: boolean, locked = fals
 :root { color-scheme: dark; --bg: #222725; --panel: #2c3230; --line: #4a524f; --text: #eeebe0; --muted: #a8aea6; --go: #0e6b47; --go-hover: #128056; --stop: #f08a80; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 28px 24px; }
+main { width: 100%; max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 28px 24px; }
 h1 { margin: 0 0 8px; font-size: 1.5rem; line-height: 1.2; }
 p { margin: 0 0 20px; color: var(--muted); }
 label { display: grid; gap: 6px; font-weight: 600; }
@@ -149,6 +180,14 @@ button { margin-top: 16px; width: 100%; font: inherit; font-weight: 700; padding
 button:hover { background: var(--go-hover); }
 input:focus-visible, button:focus-visible { outline: 3px solid #f2c230; outline-offset: 2px; }
 .error { color: var(--stop); margin: 12px 0 0; }
+.notice { margin: 24px 0 0; padding: 14px 16px; border-left: 4px solid #f2c230; background: var(--bg); border-radius: 6px; color: var(--text); }
+.notice p { margin: 0 0 8px; color: var(--text); }
+.notice p:last-child { margin: 0; }
+details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 700; }
+details h2 { font-size: 1rem; margin: 16px 0 4px; color: var(--text); }
+details p, details li { color: var(--muted); font-size: 0.92rem; margin: 0 0 8px; }
+details ul { padding-left: 20px; margin: 0 0 8px; }
 </style>
 </head>
 <body>
@@ -163,6 +202,11 @@ ${wrongPassword ? '<p class="error" role="alert">That password is not right. Che
 ${locked ? '<p class="error" role="alert">Too many wrong passwords from this connection. Try again in 15 minutes.</p>' : ''}
 <button type="submit">Enter</button>
 </form>
+<div class="notice">
+<p><strong>Members only.</strong> Only players authorized by the ${name} staff may use this site and buy kits. Anyone else is not allowed to make purchases.</p>
+<p><strong>All purchases are final.</strong> Refunds are only given when an internal problem on our server stops you from receiving or using what you bought. In any other case there are no refunds.</p>
+</div>
+${policiesHtml(name)}
 </main>
 </body>
 </html>`;

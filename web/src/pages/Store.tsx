@@ -108,7 +108,7 @@ export function Store() {
       </div>
 
       <p className="fine-print">
-        Prices are in US dollars. Buyers in South America pay in local currency through Mercado Pago. Kits contain only base-game items with default skins. See the{' '}
+        Prices are in US dollars. Buyers in South America pay in local currency through Mercado Pago. Kits contain only base-game items with default skins. All purchases are final; see the{' '}
         <Link to="/refunds">refund policy</Link> before buying.
       </p>
     </div>
