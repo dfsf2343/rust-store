@@ -128,7 +128,7 @@ function escapeHtml(s: string): string {
 
 /** Terms and refund policy, shown on the gate page. Keep in line with web/src/pages/Legal.tsx. */
 function policiesHtml(name: string): string {
-  return `<details>
+  return `<details open>
 <summary>Terms of service</summary>
 <h2>Who can use the store</h2>
 <p>The ${name} website and store are only for players authorized by the ${name} staff. By entering the access password, signing in or buying anything you confirm that you are authorized and agree to these terms and the server rules. Purchases by anyone else are prohibited: the access is removed and the order is not refunded, except where the law requires it.</p>
@@ -151,7 +151,7 @@ function policiesHtml(name: string): string {
 <h2>Changes</h2>
 <p>We may update these terms. The version shown when you buy applies to that purchase.</p>
 </details>
-<details>
+<details open>
 <summary>Refund policy</summary>
 <p>All purchases are final and non-refundable.</p>
 <p>The only exception is an internal problem on our server that stops you from receiving or using what you bought, such as a kit that never reached your account because of an error on our side. Staff check each case, and if it is confirmed we either fix the delivery or refund the purchase.</p>
@@ -164,7 +164,7 @@ function policiesHtml(name: string): string {
 }
 
 /** The page shown to anyone without access. Plain HTML form, no scripts. */
-export function gatePage(siteName: string, wrongPassword: boolean, locked = false): string {
+export function gatePage(siteName: string, wrongPassword: boolean, locked = false, refused = false): string {
   const name = escapeHtml(siteName);
   return `<!doctype html>
 <html lang="en">
@@ -206,6 +206,7 @@ details ul { padding-left: 20px; margin: 0 0 8px; }
 </label>
 ${wrongPassword ? '<p class="error" role="alert">That password is not right. Check it with the server staff.</p>' : ''}
 ${locked ? '<p class="error" role="alert">Too many wrong passwords from this connection. Try again in 15 minutes.</p>' : ''}
+${refused ? '<p class="error" role="alert">The form was not sent from this page. Enter the password here again.</p>' : ''}
 <button type="submit">Enter</button>
 </form>
 <div class="notice">
@@ -235,8 +236,13 @@ const GATE_HEADERS = {
 /** Accepts form posts from our own pages. Some browsers send `Origin: null`; Sec-Fetch-Site then decides. */
 export function sameOriginPost(origin: string | null | undefined, fetchSite: string | null | undefined, ownOrigin: string): boolean {
   if (!origin) return true;
-  if (origin === ownOrigin) return true;
-  return origin === 'null' && fetchSite === 'same-origin';
+  if (origin === 'null') return fetchSite !== 'cross-site';
+  try {
+    // Same host on http or https: an http page whose form is upgraded to https still counts.
+    return new URL(origin).host === new URL(ownOrigin).host;
+  } catch {
+    return false;
+  }
 }
 
 /** Counts wrong passwords per address. The Worker keeps the counters in the Durable Object. */
@@ -260,10 +266,10 @@ export async function gate(
   const secure = url.protocol === 'https:';
   if (url.pathname === ACCESS_PATH && request.method === 'POST') {
     // Same-site form posts only.
-    if (!sameOriginPost(request.headers.get('origin'), request.headers.get('sec-fetch-site'), url.origin)) {
-      return new Response('Forbidden', { status: 403 });
+    if (!sameOriginPost(request.headers.get('origin'), request.headers.get('sec-fetch-site'), url.origin) || !ip) {
+      console.warn(JSON.stringify({ msg: 'Password form refused', origin: request.headers.get('origin'), fetchSite: request.headers.get('sec-fetch-site'), url: url.origin, hasIp: Boolean(ip) }));
+      return new Response(gatePage(siteName, false, false, true), { status: 403, headers: GATE_HEADERS });
     }
-    if (!ip) return new Response('Forbidden', { status: 403 });
     if (limiter && (await limiter.isBlocked(ip))) {
       onEvent?.('access.locked');
       return new Response(gatePage(siteName, false, true), { status: 429, headers: { ...GATE_HEADERS, 'Retry-After': '900' } });

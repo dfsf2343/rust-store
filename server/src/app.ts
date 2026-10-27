@@ -60,7 +60,7 @@ export function createApp(ctx: AppContext): Express {
       if (config.runtime === 'node') void ctx.events.emit({ type, visitor: visitorFromRequest(req, ctx), path: req.path });
     };
     app.post(ACCESS_PATH, express.urlencoded({ extended: false, limit: '2kb' }), async (req, res) => {
-      if (!sameOriginPost(req.get('origin'), req.get('sec-fetch-site'), config.baseOrigin)) return void res.status(403).send('Forbidden');
+      if (!sameOriginPost(req.get('origin'), req.get('sec-fetch-site'), config.baseOrigin)) return void res.status(403).set('Cache-Control', 'no-store').type('html').send(gatePage(ctx.content().site.name, false, false, true));
       const attempt = typeof req.body?.password === 'string' ? req.body.password.slice(0, 200) : '';
       if (req.ip && (await passwordMatches(accessPassword, attempt))) {
         logGate(req, 'access.granted');

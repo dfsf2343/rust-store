@@ -2,6 +2,9 @@ import { Router } from 'express';
 import type { AppContext } from '../context.js';
 import { catalogView, siteView, statusView } from '../store/views.js';
 
+/** Changed with each release, so /api/health shows which version is live. */
+const BUILD = '2026-10-27.4';
+
 export function publicRoutes(ctx: AppContext): Router {
   const router = Router();
 
@@ -22,7 +25,7 @@ export function publicRoutes(ctx: AppContext): Router {
 
   router.get('/health', (_req, res) => {
     ctx.db.prepare('SELECT 1').get();
-    res.json({ ok: true });
+    res.json({ ok: true, build: BUILD });
   });
 
   return router;
