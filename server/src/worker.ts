@@ -224,7 +224,7 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
   const deviceId = existingDevice ?? newDeviceId();
   const logging = Boolean(env.DISCORD_WEBHOOK_URL) && !isOpenPath(pathname);
   const log = (event: SiteEvent) => {
-    if (logging) ctx.waitUntil(store.logEvent(event, url.origin).catch(() => {}));
+    if (logging) ctx.waitUntil(store.logEvent(event, url.origin).catch((err: unknown) => console.error('Activity log failed', err)));
   };
 
   let response: Response | null = null;

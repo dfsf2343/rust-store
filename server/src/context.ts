@@ -44,7 +44,8 @@ export function createContext(config: AppConfig, deps: ContextDeps): AppContext 
     log.info({ catalogVersion: current.catalogVersion }, 'Content reloaded');
     return current;
   };
-  const fetchFn = deps.fetchFn ?? fetch;
+  // Bound: Workers throw "Illegal invocation" when fetch is called as a method of another object.
+  const fetchFn: typeof fetch = deps.fetchFn ?? fetch.bind(globalThis);
   const events =
     deps.events ??
     (config.discordWebhookUrl ? new DiscordEventLog(config.discordWebhookUrl, fetchFn, log.child({ module: 'events' }), now, current.site.name) : noEventLog);
