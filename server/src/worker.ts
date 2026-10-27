@@ -96,7 +96,14 @@ export class StoreObject extends DurableObject<Env> {
     const log = consoleLogger(logLevel(this.env));
     for (const warning of config.warnings) log.warn(warning);
     this.appCtx = createContext(config, { db: this.db, logger: log, loadContent: () => content, geo: noGeoLookup });
-    log.info({ baseUrl: config.baseUrl, providers: [...this.appCtx.providers.enabled] }, 'Store started');
+    log.info(
+      {
+        baseUrl: config.baseUrl,
+        providers: [...this.appCtx.providers.enabled],
+        discordLog: config.discordWebhookUrl ? 'on' : this.env.DISCORD_WEBHOOK_URL ? 'invalid URL' : 'DISCORD_WEBHOOK_URL not set',
+      },
+      'Store started',
+    );
     return this.appCtx;
   }
 

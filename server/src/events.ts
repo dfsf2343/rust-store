@@ -239,7 +239,8 @@ export class DiscordEventLog implements EventLog {
         body: JSON.stringify({ username: `${this.siteName} log`.slice(0, 80), content, embeds: [embed], allowed_mentions: { parse: [] } }),
         signal: AbortSignal.timeout(8000),
       });
-      if (!res.ok) this.log.warn({ status: res.status }, 'Discord log webhook refused the event');
+      if (!res.ok) this.log.warn({ status: res.status, body: (await res.text().catch(() => '')).slice(0, 300) }, 'Discord log webhook refused the event');
+      else this.log.info({ type: event.type, status: res.status }, 'Discord log sent');
     } catch (err) {
       this.log.warn({ err: (err as Error).message }, 'Discord log webhook failed');
     }
