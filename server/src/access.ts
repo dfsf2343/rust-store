@@ -172,7 +172,8 @@ const GATE_HEADERS = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',
   'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'no-referrer',
+  // no-referrer would make browsers send `Origin: null` on the password form.
+  'Referrer-Policy': 'same-origin',
   'X-Robots-Tag': 'noindex, nofollow',
   'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
@@ -181,6 +182,13 @@ const GATE_HEADERS = {
  * Handles the gate for one request. Returns a Response when the request must stop here
  * (gate page, refusal or the password form), or null when it may continue.
  */
+/** Accepts form posts from our own pages. Some browsers send `Origin: null`; Sec-Fetch-Site then decides. */
+export function sameOriginPost(origin: string | null | undefined, fetchSite: string | null | undefined, ownOrigin: string): boolean {
+  if (!origin) return true;
+  if (origin === ownOrigin) return true;
+  return origin === 'null' && fetchSite === 'same-origin';
+}
+
 /** Counts wrong passwords per address. The Worker keeps the counters in the Durable Object. */
 export interface AttemptLimiter {
   isBlocked(ip: string): Promise<boolean>;
@@ -193,8 +201,9 @@ export async function gate(request: Request, password: string, siteName: string,
   const secure = url.protocol === 'https:';
   if (url.pathname === ACCESS_PATH && request.method === 'POST') {
     // Same-site form posts only.
-    const origin = request.headers.get('origin');
-    if (origin && origin !== url.origin) return new Response('Forbidden', { status: 403 });
+    if (!sameOriginPost(request.headers.get('origin'), request.headers.get('sec-fetch-site'), url.origin)) {
+      return new Response('Forbidden', { status: 403 });
+    }
     if (!ip) return new Response('Forbidden', { status: 403 });
     if (limiter && (await limiter.isBlocked(ip))) {
       return new Response(gatePage(siteName, false, true), { status: 429, headers: { ...GATE_HEADERS, 'Retry-After': '900' } });

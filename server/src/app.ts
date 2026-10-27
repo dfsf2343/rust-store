@@ -15,7 +15,7 @@ import { pluginRoutes } from './routes/plugin.js';
 import { publicRoutes } from './routes/public.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { cspDirectives } from './security.js';
-import { ACCESS_PATH, gatePage, hasAccess, ipAllowed, isOpenPath, issueCookie, passwordMatches } from './access.js';
+import { ACCESS_PATH, gatePage, hasAccess, ipAllowed, isOpenPath, issueCookie, passwordMatches, sameOriginPost } from './access.js';
 
 function parseTrustProxy(value: string): boolean | number | string[] {
   const v = value.trim().toLowerCase();
@@ -54,8 +54,7 @@ export function createApp(ctx: AppContext): Express {
   if (accessPassword) {
     const secure = config.baseUrl.startsWith('https://');
     app.post(ACCESS_PATH, express.urlencoded({ extended: false, limit: '2kb' }), async (req, res) => {
-      const origin = req.get('origin');
-      if (origin && origin !== config.baseOrigin) return void res.status(403).send('Forbidden');
+      if (!sameOriginPost(req.get('origin'), req.get('sec-fetch-site'), config.baseOrigin)) return void res.status(403).send('Forbidden');
       const attempt = typeof req.body?.password === 'string' ? req.body.password.slice(0, 200) : '';
       if (req.ip && (await passwordMatches(accessPassword, attempt))) {
         res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure, req.ip)).set('Cache-Control', 'no-store').redirect(303, '/');

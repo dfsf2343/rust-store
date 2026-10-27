@@ -25,6 +25,10 @@ describe('members-only gate', () => {
 
     const crossSite = await supertest(app).post('/api/access').set('Origin', 'https://evil.example').type('form').send({ password: PASSWORD });
     expect(crossSite.status).toBe(403);
+    const nullOrigin = await supertest(app).post('/api/access').set('Origin', 'null').set('Sec-Fetch-Site', 'same-origin').type('form').send({ password: PASSWORD });
+    expect(nullOrigin.status).toBe(303);
+    const nullCrossSite = await supertest(app).post('/api/access').set('Origin', 'null').set('Sec-Fetch-Site', 'cross-site').type('form').send({ password: PASSWORD });
+    expect(nullCrossSite.status).toBe(403);
 
     const right = await supertest(app).post('/api/access').set('Origin', BASE).type('form').send({ password: PASSWORD });
     expect(right.status).toBe(303);
