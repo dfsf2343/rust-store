@@ -124,7 +124,11 @@ export function errorHandler(log: Logger): ErrorRequestHandler {
     }
     if (err instanceof ProviderError) {
       log.error({ err: { message: err.message, status: err.status, body: err.body }, provider: err.provider, path: req.path }, 'Payment provider error');
-      res.status(502).json({ error: { code: 'provider_error', message: 'The payment provider is not responding. Please try again in a minute.' } });
+      // Admins see the provider's own reason, so setup problems can be fixed without reading logs.
+      const message = req.user?.isAdmin
+        ? `Payment provider error (shown to admins only): ${err.message}`
+        : 'The payment provider is not responding. Please try again in a minute.';
+      res.status(502).json({ error: { code: 'provider_error', message } });
       return;
     }
     log.error({ err, path: req.path, method: req.method }, 'Unhandled error');
