@@ -10,7 +10,7 @@ import { DurableObject } from 'cloudflare:workers';
 import catalog from '../../config/catalog.json' with { type: 'json' };
 import payments from '../../config/payments.json' with { type: 'json' };
 import site from '../../config/site.json' with { type: 'json' };
-import { gate } from './access.js';
+import { gate, ipAllowed, ipRefusal, isOpenPath } from './access.js';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { parseContent } from './content.js';
@@ -36,6 +36,7 @@ interface Env {
   LOG_LEVEL?: string;
   NODE_ENV?: string;
   ACCESS_PASSWORD?: string;
+  ALLOWED_IPS?: string;
 }
 
 function stringVars(env: object): Record<string, string> {
@@ -135,6 +136,13 @@ function forward(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request, env) {
+    // IP allowlist: other addresses get a bare 403 for everything. Webhooks and the game
+    // plugin stay reachable because they come from the providers' and the game server's own
+    // addresses and are authenticated by their signatures.
+    const allowedIps = env.ALLOWED_IPS?.trim();
+    if (allowedIps && !isOpenPath(new URL(request.url).pathname) && !ipAllowed(request.headers.get('cf-connecting-ip'), allowedIps)) {
+      return ipRefusal();
+    }
     // Members-only mode: nothing (pages, files or API) is served without the access cookie.
     const password = env.ACCESS_PASSWORD?.trim();
     if (password) {

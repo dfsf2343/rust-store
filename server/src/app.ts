@@ -15,7 +15,7 @@ import { pluginRoutes } from './routes/plugin.js';
 import { publicRoutes } from './routes/public.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { cspDirectives } from './security.js';
-import { ACCESS_PATH, gatePage, hasAccess, isOpenPath, issueCookie, passwordMatches } from './access.js';
+import { ACCESS_PATH, gatePage, hasAccess, ipAllowed, isOpenPath, issueCookie, passwordMatches } from './access.js';
 
 function parseTrustProxy(value: string): boolean | number | string[] {
   const v = value.trim().toLowerCase();
@@ -40,6 +40,15 @@ export function createApp(ctx: AppContext): Express {
     }),
   );
 
+  // IP allowlist (the Worker applies it first on Cloudflare; req.ip comes from the trusted proxy there).
+  const allowedIps = config.allowedIps;
+  if (allowedIps) {
+    app.use((req, res, next) => {
+      if (isOpenPath(req.path) || ipAllowed(req.ip, allowedIps)) return next();
+      res.status(403).set('Cache-Control', 'no-store').type('text').send('Forbidden');
+    });
+  }
+
   // Members-only gate. On Cloudflare the Worker applies the same gate before files and the API; this covers Node.
   const accessPassword = config.accessPassword;
   if (accessPassword) {
@@ -48,14 +57,14 @@ export function createApp(ctx: AppContext): Express {
       const origin = req.get('origin');
       if (origin && origin !== config.baseOrigin) return void res.status(403).send('Forbidden');
       const attempt = typeof req.body?.password === 'string' ? req.body.password.slice(0, 200) : '';
-      if (await passwordMatches(accessPassword, attempt)) {
-        res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure)).set('Cache-Control', 'no-store').redirect(303, '/');
+      if (req.ip && (await passwordMatches(accessPassword, attempt))) {
+        res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure, req.ip)).set('Cache-Control', 'no-store').redirect(303, '/');
         return;
       }
       res.status(401).set('Cache-Control', 'no-store').type('html').send(gatePage(ctx.content().site.name, true));
     });
     app.use(async (req, res, next) => {
-      if (isOpenPath(req.path) || (await hasAccess(accessPassword, req.get('cookie'), ctx.now()))) return next();
+      if (isOpenPath(req.path) || (await hasAccess(accessPassword, req.get('cookie'), ctx.now(), req.ip))) return next();
       res.set('Cache-Control', 'no-store');
       if (req.path.startsWith('/api/')) {
         res.status(401).json({ error: { code: 'access_required', message: 'Enter the access password first.' } });

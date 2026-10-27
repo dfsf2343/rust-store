@@ -27,6 +27,7 @@ const EnvSchema = z.object({
   ADMIN_STEAM_IDS: optionalString,
   PLUGIN_SECRET: optionalString,
   ACCESS_PASSWORD: optionalString,
+  ALLOWED_IPS: optionalString,
   STRIPE_SECRET_KEY: optionalString,
   STRIPE_WEBHOOK_SECRET: optionalString,
   STRIPE_API_BASE: optionalString,
@@ -66,6 +67,8 @@ export interface AppConfig {
   pluginSecret: string | null;
   /** Members-only password for the whole site (access.ts). Null means the site is public. */
   accessPassword: string | null;
+  /** Comma-separated addresses or CIDR ranges allowed to open the site. Null means any address. */
+  allowedIps: string | null;
   stripe: { secretKey: string; webhookSecret: string | null; apiBase: URL | null } | null;
   paypal: { clientId: string; clientSecret: string; env: 'sandbox' | 'live' } | null;
   mercadopago: { accessToken: string; webhookSecret: string | null; useSandboxUrl: boolean } | null;
@@ -215,6 +218,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminSteamIds,
     pluginSecret: e.PLUGIN_SECRET ?? null,
     accessPassword: e.ACCESS_PASSWORD ?? null,
+    allowedIps: e.ALLOWED_IPS ?? null,
     stripe,
     paypal,
     mercadopago,

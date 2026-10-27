@@ -46,9 +46,35 @@ describe('members-only gate', () => {
     expect(await gate(new Request('https://x.workers.dev/api/webhooks/stripe', { method: 'POST' }), PASSWORD, 'CC', now)).toBeNull();
     const form = new FormData();
     form.set('password', PASSWORD);
-    const ok = await gate(new Request('https://x.workers.dev/api/access', { method: 'POST', body: form, headers: { Origin: 'https://x.workers.dev' } }), PASSWORD, 'CC', now);
+    const ok = await gate(new Request('https://x.workers.dev/api/access', { method: 'POST', body: form, headers: { Origin: 'https://x.workers.dev', 'cf-connecting-ip': '203.0.113.7' } }), PASSWORD, 'CC', now);
     expect(ok?.status).toBe(303);
     const cookie = ok!.headers.get('set-cookie')!.split(';')[0]!;
-    expect(await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie } }), PASSWORD, 'CC', now)).toBeNull();
+    expect(await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie, 'cf-connecting-ip': '203.0.113.7' } }), PASSWORD, 'CC', now)).toBeNull();
+    // The same cookie from another address is refused until the password is entered there.
+    expect((await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie, 'cf-connecting-ip': '198.51.100.9' } }), PASSWORD, 'CC', now))?.status).toBe(401);
+  });
+});
+
+import { ipAllowed } from '../src/access.js';
+
+describe('IP allowlist', () => {
+  it('matches addresses and ranges, IPv4 and IPv6', () => {
+    const list = '203.0.113.7, 198.51.100.0/24, 2001:db8::/32';
+    expect(ipAllowed('203.0.113.7', list)).toBe(true);
+    expect(ipAllowed('203.0.113.8', list)).toBe(false);
+    expect(ipAllowed('198.51.100.250', list)).toBe(true);
+    expect(ipAllowed('198.51.101.1', list)).toBe(false);
+    expect(ipAllowed('2001:db8:1234::1', list)).toBe(true);
+    expect(ipAllowed('2001:db9::1', list)).toBe(false);
+    expect(ipAllowed('::ffff:203.0.113.7', list)).toBe(true);
+    expect(ipAllowed(null, list)).toBe(false);
+    expect(ipAllowed('not-an-ip', list)).toBe(false);
+  });
+
+  it('refuses other addresses on Node but keeps webhooks and the plugin open', async () => {
+    const { app } = makeCtx({ env: { ALLOWED_IPS: '203.0.113.7', TRUST_PROXY: 'true' } });
+    expect((await supertest(app).get('/api/site').set('X-Forwarded-For', '198.51.100.9')).status).toBe(403);
+    expect((await supertest(app).get('/api/site').set('X-Forwarded-For', '203.0.113.7')).status).toBe(200);
+    expect((await supertest(app).post('/api/plugin/sync').set('X-Forwarded-For', '198.51.100.9').send({})).status).not.toBe(403);
   });
 });

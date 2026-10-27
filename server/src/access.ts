@@ -20,6 +20,54 @@ export function isOpenPath(pathname: string): boolean {
   );
 }
 
+// ---------- IP allowlist (ALLOWED_IPS) ----------
+
+/** Parses an IPv4 or IPv6 address into a bigint and its bit width, or null when invalid. */
+function parseIp(ip: string): { value: bigint; bits: 32 | 128 } | null {
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (v4) {
+    const parts = v4.slice(1).map(Number);
+    if (parts.some((p) => p > 255)) return null;
+    return { value: parts.reduce((acc, p) => (acc << 8n) | BigInt(p), 0n), bits: 32 };
+  }
+  if (!ip.includes(':') || !/^[0-9a-fA-F:.]+$/.test(ip)) return null;
+  // IPv4-mapped IPv6 (::ffff:1.2.3.4) is treated as the IPv4 address.
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (mapped) return parseIp(mapped[1]!);
+  const halves = ip.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? head.length !== 8 : missing < 1) return null;
+  const groups = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...tail];
+  if (groups.some((g) => !/^[0-9a-fA-F]{1,4}$/.test(g))) return null;
+  return { value: groups.reduce((acc, g) => (acc << 16n) | BigInt(parseInt(g, 16)), 0n), bits: 128 };
+}
+
+/** True when `ip` matches one entry of a comma-separated list of addresses and CIDR ranges. */
+export function ipAllowed(ip: string | null | undefined, list: string): boolean {
+  const addr = ip ? parseIp(ip.trim()) : null;
+  if (!addr) return false;
+  for (const raw of list.split(',')) {
+    const entry = raw.trim();
+    if (!entry) continue;
+    const [base, prefixText] = entry.split('/');
+    const net = base ? parseIp(base) : null;
+    if (!net || net.bits !== addr.bits) continue;
+    const prefix = prefixText === undefined ? net.bits : Number(prefixText);
+    if (!Number.isInteger(prefix) || prefix < 0 || prefix > net.bits) continue;
+    const shift = BigInt(net.bits - prefix);
+    if (addr.value >> shift === net.value >> shift) return true;
+  }
+  return false;
+}
+
+/** Plain refusal for addresses outside ALLOWED_IPS: no page, no hint about the site. */
+export function ipRefusal(): Response {
+  return new Response('Forbidden', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' } });
+}
+
 const encoder = new TextEncoder();
 
 function toHex(buf: ArrayBuffer): string {
@@ -45,9 +93,13 @@ export async function passwordMatches(password: string, attempt: string): Promis
   return safeEqual(expected, given);
 }
 
-export async function issueCookie(password: string, nowSeconds: number, secure: boolean): Promise<string> {
+/**
+ * The cookie is bound to the address that entered the password: from any other IP it is
+ * refused and the visitor has to enter the password again, which then enables that IP.
+ */
+export async function issueCookie(password: string, nowSeconds: number, secure: boolean, ip: string): Promise<string> {
   const expires = nowSeconds + ACCESS_TTL_SECONDS;
-  const value = `${expires}.${await sign(password, `access:${expires}`)}`;
+  const value = `${expires}.${await sign(password, `access:${expires}:${ip}`)}`;
   return `${ACCESS_COOKIE}=${value}; Path=/; Max-Age=${ACCESS_TTL_SECONDS}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`;
 }
 
@@ -60,13 +112,14 @@ export function readCookie(header: string | null | undefined, name: string): str
   return null;
 }
 
-export async function hasAccess(password: string, cookieHeader: string | null | undefined, nowSeconds: number): Promise<boolean> {
+export async function hasAccess(password: string, cookieHeader: string | null | undefined, nowSeconds: number, ip: string | null | undefined): Promise<boolean> {
+  if (!ip) return false;
   const value = readCookie(cookieHeader, ACCESS_COOKIE);
   if (!value || value.length > 200) return false;
   const [expiresText, mac] = value.split('.');
   const expires = Number(expiresText);
   if (!mac || !Number.isInteger(expires) || expires <= nowSeconds) return false;
-  return safeEqual(mac, await sign(password, `access:${expires}`));
+  return safeEqual(mac, await sign(password, `access:${expires}:${ip}`));
 }
 
 function escapeHtml(s: string): string {
@@ -129,6 +182,7 @@ const GATE_HEADERS = {
  */
 export async function gate(request: Request, password: string, siteName: string, nowSeconds: number): Promise<Response | null> {
   const url = new URL(request.url);
+  const ip = request.headers.get('cf-connecting-ip');
   const secure = url.protocol === 'https:';
   if (url.pathname === ACCESS_PATH && request.method === 'POST') {
     // Same-site form posts only.
@@ -141,13 +195,13 @@ export async function gate(request: Request, password: string, siteName: string,
     } catch {
       attempt = '';
     }
-    if (await passwordMatches(password, attempt)) {
-      return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure), 'Cache-Control': 'no-store' } });
+    if (ip && (await passwordMatches(password, attempt))) {
+      return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure, ip), 'Cache-Control': 'no-store' } });
     }
     return new Response(gatePage(siteName, true), { status: 401, headers: GATE_HEADERS });
   }
   if (isOpenPath(url.pathname)) return null;
-  if (await hasAccess(password, request.headers.get('cookie'), nowSeconds)) return null;
+  if (await hasAccess(password, request.headers.get('cookie'), nowSeconds, ip)) return null;
   if (url.pathname.startsWith('/api/')) {
     return Response.json({ error: { code: 'access_required', message: 'Enter the access password first.' } }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
