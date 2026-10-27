@@ -94,12 +94,13 @@ export async function passwordMatches(password: string, attempt: string): Promis
 }
 
 /**
- * The cookie is bound to the address that entered the password: from any other IP it is
- * refused and the visitor has to enter the password again, which then enables that IP.
+ * The cookie stays valid when the visitor's IP changes: phones switch between mobile data,
+ * Wi-Fi, IPv4 and IPv6 (and iCloud Private Relay rotates addresses), which made a cookie tied
+ * to one IP fail mid-visit. Changing the password still signs everyone out.
  */
-export async function issueCookie(password: string, nowSeconds: number, secure: boolean, ip: string): Promise<string> {
+export async function issueCookie(password: string, nowSeconds: number, secure: boolean): Promise<string> {
   const expires = nowSeconds + ACCESS_TTL_SECONDS;
-  const value = `${expires}.${await sign(password, `access:${expires}:${ip}`)}`;
+  const value = `${expires}.${await sign(password, `access:${expires}`)}`;
   return `${ACCESS_COOKIE}=${value}; Path=/; Max-Age=${ACCESS_TTL_SECONDS}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`;
 }
 
@@ -112,14 +113,13 @@ export function readCookie(header: string | null | undefined, name: string): str
   return null;
 }
 
-export async function hasAccess(password: string, cookieHeader: string | null | undefined, nowSeconds: number, ip: string | null | undefined): Promise<boolean> {
-  if (!ip) return false;
+export async function hasAccess(password: string, cookieHeader: string | null | undefined, nowSeconds: number): Promise<boolean> {
   const value = readCookie(cookieHeader, ACCESS_COOKIE);
   if (!value || value.length > 200) return false;
   const [expiresText, mac] = value.split('.');
   const expires = Number(expiresText);
   if (!mac || !Number.isInteger(expires) || expires <= nowSeconds) return false;
-  return safeEqual(mac, await sign(password, `access:${expires}:${ip}`));
+  return safeEqual(mac, await sign(password, `access:${expires}`));
 }
 
 function escapeHtml(s: string): string {
@@ -156,7 +156,7 @@ function policiesHtml(name: string): string {
 <p>All purchases are final and non-refundable.</p>
 <p>The only exception is an internal problem on our server that stops you from receiving or using what you bought, such as a kit that never reached your account because of an error on our side. Staff check each case, and if it is confirmed we either fix the delivery or refund the purchase.</p>
 <ul>
-<li>Changing your mind, wipes, bans, server rule changes or game updates are not reasons for a refund.</li>
+<li>Changing your mind, wipes, bans, server rule changes, game updates or entering the wrong SteamID are not reasons for a refund.</li>
 <li>To report a problem, open a ticket with the server staff within 14 days and include your order ID.</li>
 <li>This policy is governed by the laws of the United States, as set out in the terms of service.</li>
 </ul>
@@ -283,15 +283,17 @@ export async function gate(
     }
     if (await passwordMatches(password, attempt)) {
       onEvent?.('access.granted');
-      return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure, ip), 'Cache-Control': 'no-store' } });
+      return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure), 'Cache-Control': 'no-store' } });
     }
     await limiter?.recordFailure(ip);
     onEvent?.('access.denied');
     return new Response(gatePage(siteName, true), { status: 401, headers: GATE_HEADERS });
   }
   if (isOpenPath(url.pathname)) return null;
-  if (await hasAccess(password, request.headers.get('cookie'), nowSeconds, ip)) return null;
-  if (url.pathname.startsWith('/api/')) {
+  if (await hasAccess(password, request.headers.get('cookie'), nowSeconds)) return null;
+  // A link opened in the browser (for example Steam sign-in) gets the password page, not JSON.
+  const navigation = request.headers.get('sec-fetch-dest') === 'document';
+  if (url.pathname.startsWith('/api/') && !navigation) {
     return Response.json({ error: { code: 'access_required', message: 'Enter the access password first.' } }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
   if (request.method === 'GET') onEvent?.('access.page');

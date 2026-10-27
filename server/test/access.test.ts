@@ -54,8 +54,11 @@ describe('members-only gate', () => {
     expect(ok?.status).toBe(303);
     const cookie = ok!.headers.get('set-cookie')!.split(';')[0]!;
     expect(await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie, 'cf-connecting-ip': '203.0.113.7' } }), PASSWORD, 'CC', now)).toBeNull();
-    // The same cookie from another address is refused until the password is entered there.
-    expect((await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie, 'cf-connecting-ip': '198.51.100.9' } }), PASSWORD, 'CC', now))?.status).toBe(401);
+    // Phones change IP mid-visit: the cookie keeps working from another address.
+    expect(await gate(new Request('https://x.workers.dev/assets/index.js', { headers: { Cookie: cookie, 'cf-connecting-ip': '198.51.100.9' } }), PASSWORD, 'CC', now)).toBeNull();
+    // Opening an API link in the browser without access shows the password page.
+    const nav = await gate(new Request('https://x.workers.dev/api/auth/steam', { headers: { 'sec-fetch-dest': 'document' } }), PASSWORD, 'CC', now);
+    expect(nav?.headers.get('content-type')).toContain('text/html');
   });
 });
 
@@ -80,5 +83,23 @@ describe('IP allowlist', () => {
     expect((await supertest(app).get('/api/site').set('X-Forwarded-For', '198.51.100.9')).status).toBe(403);
     expect((await supertest(app).get('/api/site').set('X-Forwarded-For', '203.0.113.7')).status).toBe(200);
     expect((await supertest(app).post('/api/plugin/sync').set('X-Forwarded-For', '198.51.100.9').send({})).status).not.toBe(403);
+  });
+});
+
+import { PLAYER_STEAM } from './helpers.js';
+
+describe('checkout without Steam sign-in', () => {
+  it('takes a SteamID or profile link and shows the order only to the same browser', async () => {
+    const { app } = makeCtx();
+    const agent = supertest.agent(app);
+    const bad = await agent.post('/api/checkout').set('Origin', BASE).send({ kitId: 'x', durationId: 'y', provider: 'stripe', acceptTerms: true });
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+    const site = await agent.get('/api/catalog');
+    const kit = site.body.kits[0];
+    const duration = site.body.durations[0];
+    const missing = await agent.post('/api/checkout').set('Origin', BASE).send({ kitId: kit.id, durationId: duration.id, provider: 'paypal', acceptTerms: true });
+    expect(missing.body.error.code).toBe('steam_id_required');
+    const wrong = await agent.post('/api/checkout').set('Origin', BASE).send({ kitId: kit.id, durationId: duration.id, provider: 'paypal', acceptTerms: true, steamId: '12345' });
+    expect(wrong.body.error.code).toBe('invalid_steam_id');
   });
 });

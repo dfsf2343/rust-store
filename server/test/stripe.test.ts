@@ -28,6 +28,21 @@ async function startCheckout() {
 }
 
 describe('Stripe checkout', () => {
+  it('works without Steam sign-in and only shows the order to the same browser', async () => {
+    const t = makeCtx({ env: { DEV_FORCE_COUNTRY: 'US' } });
+    (t.stripeClient.checkout.sessions as unknown as { create: unknown }).create = vi.fn(async () => ({ id: 'cs_guest', url: 'https://checkout.stripe.com/c/pay/cs_guest' }));
+    const buyer = supertest.agent(t.app);
+    const res = await buyer
+      .post('/api/checkout')
+      .set(ORIGIN)
+      .send({ kitId: 'warlord', durationId: '30d', provider: 'stripe', acceptTerms: true, steamId: `https://steamcommunity.com/profiles/${PLAYER_STEAM}/` });
+    expect(res.status).toBe(200);
+    const order = t.ctx.orders.get(res.body.orderId)!;
+    expect(order.steam_id).toBe(PLAYER_STEAM);
+    expect((await buyer.get(`/api/orders/${order.id}`)).status).toBe(200);
+    expect((await supertest(t.app).get(`/api/orders/${order.id}`)).status).toBe(404);
+  });
+
   it('only offers Stripe to US buyers and quotes USD', async () => {
     const { app } = makeCtx({ env: { DEV_FORCE_COUNTRY: 'US' } });
     const res = await supertest(app).get('/api/checkout/options?kitId=warlord&durationId=30d');
@@ -47,7 +62,9 @@ describe('Stripe checkout', () => {
 
   it('requires terms acceptance, login and same-origin requests', async () => {
     const { app } = makeCtx({ env: { DEV_FORCE_COUNTRY: 'US' } });
-    expect((await supertest(app).post('/api/checkout').set(ORIGIN).send({})).status).toBe(401);
+    // Without Steam sign-in the buyer has to name the Steam account.
+    const guest = await supertest(app).post('/api/checkout').set(ORIGIN).send({ kitId: 'warlord', durationId: '30d', provider: 'stripe', acceptTerms: true });
+    expect(guest.body.error.code).toBe('steam_id_required');
     const agent = await loginAs(app, PLAYER_STEAM);
     const noTerms = await agent.post('/api/checkout').set(ORIGIN).send({ kitId: 'warlord', durationId: '30d', provider: 'stripe' });
     expect(noTerms.status).toBe(400);

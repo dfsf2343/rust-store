@@ -64,16 +64,16 @@ export function createApp(ctx: AppContext): Express {
       const attempt = typeof req.body?.password === 'string' ? req.body.password.slice(0, 200) : '';
       if (req.ip && (await passwordMatches(accessPassword, attempt))) {
         logGate(req, 'access.granted');
-        res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure, req.ip)).set('Cache-Control', 'no-store').redirect(303, '/');
+        res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure)).set('Cache-Control', 'no-store').redirect(303, '/');
         return;
       }
       logGate(req, 'access.denied');
       res.status(401).set('Cache-Control', 'no-store').type('html').send(gatePage(ctx.content().site.name, true));
     });
     app.use(async (req, res, next) => {
-      if (isOpenPath(req.path) || (await hasAccess(accessPassword, req.get('cookie'), ctx.now(), req.ip))) return next();
+      if (isOpenPath(req.path) || (await hasAccess(accessPassword, req.get('cookie'), ctx.now()))) return next();
       res.set('Cache-Control', 'no-store');
-      if (req.path.startsWith('/api/')) {
+      if (req.path.startsWith('/api/') && req.get('sec-fetch-dest') !== 'document') {
         res.status(401).json({ error: { code: 'access_required', message: 'Enter the access password first.' } });
         return;
       }

@@ -31,7 +31,7 @@ export function Terms() {
         except where the law requires it. Do not share the access password.
       </p>
       <h2>Your account</h2>
-      <p>You sign in with Steam. Purchases are tied to the Steam account you were signed in with when you paid and cannot be moved to another account.</p>
+      <p>You either sign in with Steam or enter a SteamID64 or Steam profile link at checkout. Each purchase is tied to that Steam account and cannot be moved to another one, so check it before paying. A kit sent to the wrong account because of a mistyped ID is not refunded.</p>
       <h2>What you are buying</h2>
       <p>
         A kit purchase gives your Steam account the right to claim that kit in game on our server, once per cooldown, for the access length you chose. Kits are virtual items with no cash
@@ -115,6 +115,7 @@ export function Refunds() {
         <li>Wipes, game updates, or changes to kits, cooldowns or server settings.</li>
         <li>Bans or other action taken for breaking the server rules.</li>
         <li>Buying while not being an authorized member of the server.</li>
+        <li>Entering the wrong SteamID or Steam profile link at checkout.</li>
       </ul>
       <h2>How to report a problem</h2>
       <p>
@@ -145,7 +146,7 @@ export function Privacy() {
       <p>This policy explains what {operatorName} collects when you use the {site.name} website and store, and why.</p>
       <h2>What we collect</h2>
       <ul>
-        <li>Your SteamID64, Steam display name and avatar, received from Steam when you sign in.</li>
+        <li>Your SteamID64, plus your Steam display name and avatar when you sign in with Steam.</li>
         <li>Orders: the kit, duration, amount, payment provider and the provider's reference numbers.</li>
         <li>Your IP address and the country it maps to, used to offer the right payment methods and to prevent fraud.</li>
         <li>When you claim kits in game, so cooldowns work across server restarts.</li>

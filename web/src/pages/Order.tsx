@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { api, ApiError, type Order as OrderView } from '../api';
-import { CopyButton, Notice, PageHeader, SteamSignIn, Spinner } from '../components/bits';
+import { CopyButton, Notice, PageHeader, Spinner } from '../components/bits';
 import { useStore } from '../data';
 import { formatDateTime } from '../format';
 
@@ -18,7 +18,7 @@ export function Order() {
   const polls = useRef(0);
 
   useEffect(() => {
-    if (!me.user || !orderId) return;
+    if (!orderId) return;
     let alive = true;
     let timer: number | undefined;
     // Mercado Pago appends payment_id (or collection_id) when it sends the buyer back.
@@ -50,18 +50,6 @@ export function Order() {
       if (timer) window.clearTimeout(timer);
     };
   }, [me.user, orderId, params]);
-
-  if (!me.user) {
-    return (
-      <div className="container page page--narrow">
-        <PageHeader title="Order" />
-        <div className="gate">
-          <p>Sign in through Steam to see this order.</p>
-          <SteamSignIn />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container page page--narrow">

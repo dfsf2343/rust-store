@@ -1,6 +1,8 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { requireUser } from '../auth/sessions.js';
+import type { UserRow } from '../auth/sessions.js';
+import { resolveSteamInput, SteamIdInputError } from '../auth/steam-id.js';
+import { addGuestOrder, GUEST_ORDERS_COOKIE, guestOwns } from '../store/guest-orders.js';
 import type { ProviderId } from '../config.js';
 import type { AppContext } from '../context.js';
 import { findDuration, findKit, priceCents } from '../content.js';
@@ -27,6 +29,8 @@ const CheckoutBody = z.object({
   durationId: z.string().min(1).max(32),
   provider: z.enum(['stripe', 'paypal', 'mercadopago']),
   acceptTerms: z.literal(true, 'You must accept the terms and refund policy'),
+  /** Only used without a Steam sign-in: SteamID64 or profile link of the account that gets the kit. */
+  steamId: z.string().max(200).optional(),
 });
 
 export function checkoutRoutes(ctx: AppContext): Router {
@@ -41,7 +45,9 @@ export function checkoutRoutes(ctx: AppContext): Router {
   function loadOwnOrder(req: Request): OrderRow {
     const id = String(req.params.id ?? '');
     const order = /^ord_[A-Za-z0-9_-]{8,40}$/.test(id) ? ctx.orders.get(id) : undefined;
-    if (!order || !req.user || (order.user_id !== req.user.id && !req.user.isAdmin)) {
+    const signedIn = req.user && (order?.user_id === req.user.id || req.user.isAdmin);
+    const guest = order && guestOwns(ctx.db, req.cookies?.[GUEST_ORDERS_COOKIE] as string | undefined, order.id);
+    if (!order || (!signedIn && !guest)) {
       throw new HttpError(404, 'Order not found.', 'not_found');
     }
     return order;
@@ -71,10 +77,25 @@ export function checkoutRoutes(ctx: AppContext): Router {
     });
   });
 
-  router.post('/checkout', requireUser, limiter(600, 15, true), async (req, res) => {
-    const user = req.user!;
-    if (user.is_banned) throw new HttpError(403, 'This account cannot make purchases.', 'banned');
+  router.post('/checkout', limiter(600, 15, true), async (req, res) => {
     const body = parseBody(CheckoutBody, req.body);
+    // Signed-in buyers get the kit on their own account; anyone else names the Steam account.
+    let user: UserRow;
+    if (req.user) {
+      user = req.user;
+    } else {
+      if (!body.steamId) throw new HttpError(400, 'Enter the SteamID64 or Steam profile link that should get the kit.', 'steam_id_required');
+      let steamId: string;
+      try {
+        steamId = await resolveSteamInput(body.steamId, ctx.config.steamApiKey, ctx.fetchFn);
+      } catch (err) {
+        if (err instanceof SteamIdInputError) throw new HttpError(400, err.message, 'invalid_steam_id');
+        throw err;
+      }
+      ctx.db.prepare('INSERT OR IGNORE INTO users (steam_id, created_at, last_login_at) VALUES (?, ?, ?)').run(steamId, ctx.now(), ctx.now());
+      user = ctx.db.prepare('SELECT * FROM users WHERE steam_id = ?').get(steamId) as UserRow;
+    }
+    if (user.is_banned) throw new HttpError(403, 'This account cannot make purchases.', 'banned');
     const content = ctx.content();
     const kit = findKit(content, body.kitId);
     const duration = findDuration(content, body.durationId);
@@ -95,7 +116,10 @@ export function checkoutRoutes(ctx: AppContext): Router {
     const recent = ctx.db
       .prepare(`SELECT COUNT(*) AS n FROM orders WHERE user_id = ? AND status = 'pending' AND created_at > ?`)
       .get(user.id, now - 600) as { n: number };
-    if (recent.n >= 5) throw new HttpError(429, 'You have several unfinished checkouts. Finish or wait a few minutes.', 'too_many_pending');
+    const fromIp = req.ip
+      ? (ctx.db.prepare(`SELECT COUNT(*) AS n FROM orders WHERE ip = ? AND status = 'pending' AND created_at > ?`).get(req.ip, now - 600) as { n: number })
+      : { n: 0 };
+    if (recent.n >= 5 || fromIp.n >= 8) throw new HttpError(429, 'You have several unfinished checkouts. Finish or wait a few minutes.', 'too_many_pending');
 
     const amountCents = priceCents(kit, duration);
     const quote = provider.quote(amountCents);
@@ -122,15 +146,24 @@ export function checkoutRoutes(ctx: AppContext): Router {
     ctx.orders.setProviderRef(order.id, result.providerRef);
     ctx.log.info({ orderId: order.id, provider: provider.id, kit: kit.id, duration: duration.id, country: resolved.country }, 'Checkout started');
     void ctx.events.emit({ type: 'checkout.started', visitor: visitorFromRequest(req, ctx), order: ctx.orders.summary(order) });
+    if (!req.user) {
+      res.cookie(GUEST_ORDERS_COOKIE, addGuestOrder(ctx.db, req.cookies?.[GUEST_ORDERS_COOKIE] as string | undefined, order.id), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: ctx.config.baseUrl.startsWith('https://'),
+        path: '/',
+        maxAge: 90 * 86_400_000,
+      });
+    }
     res.json({ orderId: order.id, redirectUrl: result.redirectUrl });
   });
 
-  router.get('/orders/:id', requireUser, (req, res) => {
+  router.get('/orders/:id', (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json(orderView(loadOwnOrder(req), ctx.content()));
   });
 
-  router.post('/orders/:id/refresh', requireUser, limiter(60, 20, true), async (req, res) => {
+  router.post('/orders/:id/refresh', limiter(60, 20, true), async (req, res) => {
     const order = loadOwnOrder(req);
     const body = parseBody(z.object({ paymentId: z.string().max(40).nullish() }), req.body ?? {});
     if (order.status === 'pending' || order.status === 'failed' || order.status === 'canceled' || order.status === 'expired') {

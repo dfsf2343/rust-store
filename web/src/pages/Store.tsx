@@ -83,7 +83,7 @@ export function Store() {
       <ol className="steps" aria-label="How delivery works">
         <li className="steps__item">
           <span className="steps__title">Pay on this site</span>
-          <span className="steps__text">Sign in through Steam so the kit lands on the right account.</span>
+          <span className="steps__text">Enter your SteamID64 or Steam profile link at checkout, or sign in with Steam, so the kit lands on the right account.</span>
         </li>
         <li className="steps__item">
           <span className="steps__title">Join the server</span>

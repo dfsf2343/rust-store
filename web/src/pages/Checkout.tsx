@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, ApiError, type CheckoutOptions, type ProviderId } from '../api';
-import { Notice, PageHeader, SteamSignIn, TierPlate } from '../components/bits';
+import { Notice, PageHeader, TierPlate } from '../components/bits';
 import { useApi, useStore } from '../data';
 import { hoursLabel } from '../format';
 import { NotFound } from './NotFound';
@@ -11,6 +11,8 @@ const PROVIDER_NAMES: Record<ProviderId, string> = {
   paypal: 'PayPal',
   mercadopago: 'Mercado Pago',
 };
+
+const STEAM_INPUT_RE = /^(?:7656119\d{10}|(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/(?:profiles\/7656119\d{10}|id\/[A-Za-z0-9_-]{2,32})\/?)$/i;
 
 export function Checkout() {
   const { kitId } = useParams();
@@ -23,6 +25,7 @@ export function Checkout() {
   const options = useApi<CheckoutOptions>(kit && duration ? `/checkout/options?kitId=${kit.id}&durationId=${duration.id}` : null);
   const [provider, setProvider] = useState<ProviderId | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [steamInput, setSteamInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,16 +37,17 @@ export function Checkout() {
   if (!kit || !duration) return <NotFound />;
   const price = kit.prices[duration.id];
   const selected = options.data?.providers.find((p) => p.id === provider) ?? null;
+  const steamOk = STEAM_INPUT_RE.test(steamInput.trim());
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selected || !accepted) return;
+    if (!selected || !accepted || (!me.user && !steamOk)) return;
     setSubmitting(true);
     setError(null);
     try {
       const res = await api<{ orderId: string; redirectUrl: string }>('/checkout', {
         method: 'POST',
-        body: { kitId: kit.id, durationId: duration.id, provider: selected.id, acceptTerms: true },
+        body: { kitId: kit.id, durationId: duration.id, provider: selected.id, acceptTerms: true, ...(me.user ? {} : { steamId: steamInput.trim() }) },
       });
       // The demo build has no payment page: its stand-in API returns an in-app path.
       if (import.meta.env.MODE === 'demo') navigate(res.redirectUrl);
@@ -72,18 +76,35 @@ export function Checkout() {
         <p className="summary__price">{price?.display}</p>
       </div>
 
-      {!me.user ? (
-        <div className="gate">
-          <p>Sign in through Steam first. The kit is delivered to the Steam account you sign in with.</p>
-          <SteamSignIn />
-        </div>
-      ) : me.user.banned ? (
+      {me.user?.banned ? (
         <Notice tone="error">This Steam account cannot make purchases. Contact staff on Discord if you think this is a mistake.</Notice>
       ) : (
         <form className="pay" onSubmit={submit}>
-          <p className="pay__buyer">
-            Delivering to <strong>{me.user.name ?? 'your account'}</strong> <span className="muted">(SteamID {me.user.steamId})</span>
-          </p>
+          {me.user ? (
+            <p className="pay__buyer">
+              Delivering to <strong>{me.user.name ?? 'your account'}</strong> <span className="muted">(SteamID {me.user.steamId})</span>
+            </p>
+          ) : (
+            <label className="field">
+              <span className="field__label">Steam account that gets the kit</span>
+              <input
+                className="field__input"
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={200}
+                placeholder="76561198000000000 or steamcommunity.com/profiles/..."
+                value={steamInput}
+                onChange={(e) => setSteamInput(e.target.value)}
+                aria-invalid={steamInput.trim() !== '' && !steamOk}
+                required
+              />
+              <span className="fine-print">
+                Paste your SteamID64 or your Steam profile link. Find it in Steam under your profile, then Copy page URL. Check it carefully: the kit goes to this account.
+              </span>
+            </label>
+          )}
 
           {options.loading && <p className="muted">Loading payment options...</p>}
           {options.error && <Notice tone="error">{options.error}</Notice>}
@@ -126,7 +147,7 @@ export function Checkout() {
 
           {error && <Notice tone="error">{error}</Notice>}
 
-          <button className="button button--go button--large button--block" type="submit" disabled={!selected || !accepted || submitting}>
+          <button className="button button--go button--large button--block" type="submit" disabled={!selected || !accepted || submitting || (!me.user && !steamOk)}>
             {submitting
               ? 'Opening secure checkout...'
               : selected

@@ -1335,6 +1335,40 @@ code {
   margin: 0 0 20px;
 }
 
+.field {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 20px;
+}
+
+.field__label {
+  font-weight: 700;
+}
+
+.field__input {
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  color: var(--chalk);
+  background: var(--tarmac);
+  border: 1px solid var(--curb);
+  border-radius: var(--radius-control);
+}
+
+.field__input:focus-visible {
+  outline: 3px solid var(--lane);
+  outline-offset: 2px;
+}
+
+.field__input[aria-invalid='true'] {
+  border-color: var(--stop-text);
+}
+
+.field .fine-print {
+  margin: 0;
+}
+
 .methods {
   display: grid;
   gap: 10px;

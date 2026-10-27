@@ -3,7 +3,7 @@ import type { AppContext } from '../context.js';
 import { catalogView, siteView, statusView } from '../store/views.js';
 
 /** Changed with each release, so /api/health shows which version is live. */
-const BUILD = '2026-10-27.5';
+const BUILD = '2026-10-27.6';
 
 export function publicRoutes(ctx: AppContext): Router {
   const router = Router();
