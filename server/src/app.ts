@@ -15,6 +15,8 @@ import { pluginRoutes } from './routes/plugin.js';
 import { publicRoutes } from './routes/public.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { cspDirectives } from './security.js';
+import type { GateEvent } from './access.js';
+import { visitorFromRequest } from './visitor.js';
 import { ACCESS_PATH, gatePage, hasAccess, ipAllowed, isOpenPath, issueCookie, passwordMatches, sameOriginPost } from './access.js';
 
 function parseTrustProxy(value: string): boolean | number | string[] {
@@ -53,13 +55,19 @@ export function createApp(ctx: AppContext): Express {
   const accessPassword = config.accessPassword;
   if (accessPassword) {
     const secure = config.baseUrl.startsWith('https://');
+    // On Cloudflare the Worker logs the gate; only the Node build logs it here.
+    const logGate = (req: Request, type: GateEvent) => {
+      if (config.runtime === 'node') void ctx.events.emit({ type, visitor: visitorFromRequest(req, ctx), path: req.path });
+    };
     app.post(ACCESS_PATH, express.urlencoded({ extended: false, limit: '2kb' }), async (req, res) => {
       if (!sameOriginPost(req.get('origin'), req.get('sec-fetch-site'), config.baseOrigin)) return void res.status(403).send('Forbidden');
       const attempt = typeof req.body?.password === 'string' ? req.body.password.slice(0, 200) : '';
       if (req.ip && (await passwordMatches(accessPassword, attempt))) {
+        logGate(req, 'access.granted');
         res.set('Set-Cookie', await issueCookie(accessPassword, ctx.now(), secure, req.ip)).set('Cache-Control', 'no-store').redirect(303, '/');
         return;
       }
+      logGate(req, 'access.denied');
       res.status(401).set('Cache-Control', 'no-store').type('html').send(gatePage(ctx.content().site.name, true));
     });
     app.use(async (req, res, next) => {
@@ -69,6 +77,7 @@ export function createApp(ctx: AppContext): Express {
         res.status(401).json({ error: { code: 'access_required', message: 'Enter the access password first.' } });
         return;
       }
+      if (req.method === 'GET') logGate(req, 'access.page');
       res.status(401).type('html').send(gatePage(ctx.content().site.name, false));
     });
   }

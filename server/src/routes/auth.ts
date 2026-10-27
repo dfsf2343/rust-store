@@ -6,6 +6,7 @@ import type { AppContext } from '../context.js';
 import { audit } from '../db.js';
 import { HttpError, isSteamId, randomToken } from '../lib/util.js';
 import { limiter, parseBody } from './http.js';
+import { visitorFromRequest } from '../visitor.js';
 
 const STATE_COOKIE = 'rs_login';
 
@@ -50,16 +51,19 @@ export function authRoutes(ctx: AppContext): Router {
           })
         : null;
       const now = ctx.now();
+      const firstLogin = !ctx.db.prepare('SELECT 1 FROM users WHERE steam_id = ?').get(steamId);
       const user = upsertUser(ctx.db, steamId, profile, now);
       const token = createSession(ctx.db, user.id, now, req.ip ?? null, req.get('user-agent') ?? null);
       res.cookie(SESSION_COOKIE, token, sessionCookieOptions(ctx.config));
       audit(ctx.db, steamId, 'auth.login', steamId, { ip: req.ip }, now);
+      void ctx.events.emit({ type: 'login.ok', visitor: visitorFromRequest(req, ctx), steamId, name: user.name, firstLogin });
       res.redirect(302, returnPath);
     } catch (err) {
       // Only a fixed code reaches the page, so the query string cannot carry arbitrary text.
       const code = err instanceof SteamAuthError ? err.code : 'failed';
       if (err instanceof SteamAuthError) ctx.log.warn({ reason: err.message }, 'Steam login rejected');
       else ctx.log.error({ err }, 'Steam login error');
+      void ctx.events.emit({ type: 'login.failed', visitor: visitorFromRequest(req, ctx), reason: err instanceof SteamAuthError ? err.message : 'error' });
       res.redirect(302, `/?login_error=${code}`);
     }
   });

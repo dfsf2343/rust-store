@@ -9,6 +9,7 @@ import { formatMoney, HttpError } from '../lib/util.js';
 import type { OrderRow } from '../store/orders.js';
 import { orderView } from '../store/views.js';
 import { limiter, parseBody } from './http.js';
+import { visitorFromRequest } from '../visitor.js';
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
@@ -120,6 +121,7 @@ export function checkoutRoutes(ctx: AppContext): Router {
     }
     ctx.orders.setProviderRef(order.id, result.providerRef);
     ctx.log.info({ orderId: order.id, provider: provider.id, kit: kit.id, duration: duration.id, country: resolved.country }, 'Checkout started');
+    void ctx.events.emit({ type: 'checkout.started', visitor: visitorFromRequest(req, ctx), order: ctx.orders.summary(order) });
     res.json({ orderId: order.id, redirectUrl: result.redirectUrl });
   });
 

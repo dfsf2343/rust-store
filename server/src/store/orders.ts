@@ -2,6 +2,7 @@ import type { ProviderId } from '../config.js';
 import type { Content, Duration, Kit } from '../content.js';
 import { audit, type DB } from '../db.js';
 import type { Logger } from 'pino';
+import type { EventLog, OrderSummary } from '../events.js';
 import { formatMoney, randomId } from '../lib/util.js';
 import { insertGrant, recomputeEntitlement } from './entitlements.js';
 
@@ -55,7 +56,21 @@ export class OrderService {
     private readonly content: () => Content,
     private readonly log: Logger,
     private readonly now: () => number,
+    private readonly events: EventLog = { emit: async () => {} },
   ) {}
+
+  summary(order: OrderRow): OrderSummary {
+    return {
+      id: order.id,
+      steamId: order.steam_id,
+      kitName: order.kit_name,
+      durationLabel: order.duration_label,
+      amount: formatMoney(order.charge_amount, order.charge_currency),
+      provider: order.provider,
+      country: order.country,
+      ip: order.ip,
+    };
+  }
 
   get(id: string): OrderRow | undefined {
     return this.db.prepare('SELECT * FROM orders WHERE id = ?').get(id) as OrderRow | undefined;
@@ -151,11 +166,13 @@ export class OrderService {
   }
 
   markReview(orderId: string, detail: string): void {
-    this.db
+    const res = this.db
       .prepare(`UPDATE orders SET status = 'review', status_detail = ?, updated_at = ? WHERE id = ? AND status IN ('pending','failed','canceled','expired')`)
       .run(detail, this.now(), orderId);
     audit(this.db, 'system', 'order.review', orderId, { detail }, this.now());
     this.log.error({ orderId, detail }, 'Order needs manual review');
+    const order = this.get(orderId);
+    if (res.changes > 0 && order) void this.events.emit({ type: 'order.review', order: this.summary(order), detail });
   }
 
   /**
@@ -200,7 +217,10 @@ export class OrderService {
       return { fulfilled: true, order: this.get(orderId) };
     });
     const result = run.immediate();
-    if (result.fulfilled) this.log.info({ orderId }, 'Order fulfilled');
+    if (result.fulfilled) {
+      this.log.info({ orderId }, 'Order fulfilled');
+      void this.events.emit({ type: 'order.paid', order: this.summary(result.order!), paid: formatMoney(payment.paidAmount, payment.paidCurrency), actor });
+    }
     return result;
   }
 
@@ -210,10 +230,12 @@ export class OrderService {
    * so a late payment confirmation can no longer deliver it. Returns true when access changed.
    */
   reverse(orderId: string, status: 'refunded' | 'disputed', reason: string, actor = 'system'): boolean {
+    let closed: OrderRow | undefined;
     const run = this.db.transaction(() => {
       const order = this.get(orderId);
       if (!order) return false;
       const now = this.now();
+      if ((FULFILLABLE.has(order.status) || order.status === 'review' || order.status === 'paid') && order.status !== status) closed = order;
       if (FULFILLABLE.has(order.status) || order.status === 'review') {
         this.db.prepare('UPDATE orders SET status = ?, status_detail = ?, updated_at = ? WHERE id = ?').run(status, reason, now, orderId);
         audit(this.db, actor, `order.${status}`, orderId, { reason, delivered: false }, now);
@@ -230,6 +252,7 @@ export class OrderService {
     });
     const changed = run.immediate();
     if (changed) this.log.warn({ orderId, status, reason }, 'Order reversed and access revoked');
+    if (closed) void this.events.emit({ type: `order.${status}`, order: this.summary(closed), detail: reason });
     return changed;
   }
 

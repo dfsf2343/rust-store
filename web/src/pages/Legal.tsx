@@ -71,6 +71,11 @@ export function Terms() {
         The server and store are provided as they are. We work to keep them online but do not guarantee uptime. To the extent the law allows, our liability for any purchase is limited
         to the amount you paid for it.
       </p>
+      <h2>Security logs</h2>
+      <p>
+        To protect the store and stop fraud we record visits, password attempts, sign-ins and purchases, with the IP address, approximate location, network, browser and a
+        device identifier stored in a cookie. Staff can see these records.
+      </p>
       <h2>Governing law</h2>
       <p>
         These terms are governed by the laws of the United States and of the U.S. state where {operatorName} is registered, without regard to conflict-of-law rules. Any dispute is

@@ -142,6 +142,8 @@ function policiesHtml(name: string): string {
 <p>Payments are processed by Stripe (shown on statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago. We never see your full card details. Payment providers may also apply their own buyer-protection rules.</p>
 <h2>Liability and age</h2>
 <p>The server and store are provided as they are, without a guarantee of uptime. To the extent the law allows, our liability for a purchase is limited to the amount paid for it. If you are under 18, you need permission from a parent or guardian to buy.</p>
+<h2>Security logs</h2>
+<p>To protect the store and stop fraud we record visits, password attempts, sign-ins and purchases, with the IP address, approximate location, network, browser and a device identifier stored in a cookie. Staff can see these records.</p>
 <h2>Governing law</h2>
 <p>These terms are governed by the laws of the United States and of the U.S. state where the operator of ${name} is registered, without regard to conflict-of-law rules. Any dispute is handled in the courts of that state, to the extent the law allows.</p>
 <h2>Immediate delivery</h2>
@@ -243,7 +245,16 @@ export interface AttemptLimiter {
   recordFailure(ip: string): Promise<void>;
 }
 
-export async function gate(request: Request, password: string, siteName: string, nowSeconds: number, limiter?: AttemptLimiter): Promise<Response | null> {
+export type GateEvent = 'access.granted' | 'access.denied' | 'access.locked' | 'access.page';
+
+export async function gate(
+  request: Request,
+  password: string,
+  siteName: string,
+  nowSeconds: number,
+  limiter?: AttemptLimiter,
+  onEvent?: (event: GateEvent) => void,
+): Promise<Response | null> {
   const url = new URL(request.url);
   const ip = request.headers.get('cf-connecting-ip');
   const secure = url.protocol === 'https:';
@@ -254,6 +265,7 @@ export async function gate(request: Request, password: string, siteName: string,
     }
     if (!ip) return new Response('Forbidden', { status: 403 });
     if (limiter && (await limiter.isBlocked(ip))) {
+      onEvent?.('access.locked');
       return new Response(gatePage(siteName, false, true), { status: 429, headers: { ...GATE_HEADERS, 'Retry-After': '900' } });
     }
     let attempt = '';
@@ -264,9 +276,11 @@ export async function gate(request: Request, password: string, siteName: string,
       attempt = '';
     }
     if (await passwordMatches(password, attempt)) {
+      onEvent?.('access.granted');
       return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': await issueCookie(password, nowSeconds, secure, ip), 'Cache-Control': 'no-store' } });
     }
     await limiter?.recordFailure(ip);
+    onEvent?.('access.denied');
     return new Response(gatePage(siteName, true), { status: 401, headers: GATE_HEADERS });
   }
   if (isOpenPath(url.pathname)) return null;
@@ -274,5 +288,6 @@ export async function gate(request: Request, password: string, siteName: string,
   if (url.pathname.startsWith('/api/')) {
     return Response.json({ error: { code: 'access_required', message: 'Enter the access password first.' } }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
+  if (request.method === 'GET') onEvent?.('access.page');
   return new Response(gatePage(siteName, false), { status: 401, headers: GATE_HEADERS });
 }

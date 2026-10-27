@@ -11,6 +11,8 @@ import catalog from '../../config/catalog.json' with { type: 'json' };
 import payments from '../../config/payments.json' with { type: 'json' };
 import site from '../../config/site.json' with { type: 'json' };
 import { gate, ipAllowed, ipRefusal, isOpenPath } from './access.js';
+import { deviceCookie, newDeviceId, readDeviceId, type SiteEvent, type Visitor } from './events.js';
+import { firstLanguage, VISITOR_HEADER, type EdgeDetails } from './visitor.js';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { parseContent } from './content.js';
@@ -37,6 +39,7 @@ interface Env {
   NODE_ENV?: string;
   ACCESS_PASSWORD?: string;
   ALLOWED_IPS?: string;
+  DISCORD_WEBHOOK_URL?: string;
 }
 
 function stringVars(env: object): Record<string, string> {
@@ -129,6 +132,11 @@ export class StoreObject extends DurableObject<Env> {
     if (this.accessFailures.size > 10_000) this.accessFailures.clear();
   }
 
+  /** Activity log entries from the Worker (access gate and visits). */
+  async logEvent(event: SiteEvent, origin: string): Promise<void> {
+    await this.context(origin)?.events.emit(event);
+  }
+
   /** Cron trigger: expire abandoned checkouts, prune old rows, re-check pending payments. */
   async housekeeping(): Promise<{ expired: number; checked: number }> {
     const appCtx = this.context(null);
@@ -140,6 +148,42 @@ export class StoreObject extends DurableObject<Env> {
   }
 }
 
+function edgeDetails(request: Request): EdgeDetails {
+  const cf = request.cf as Record<string, unknown> | undefined;
+  const s = (v: unknown) => (typeof v === 'string' && v ? v : null);
+  return {
+    region: s(cf?.region),
+    city: s(cf?.city),
+    postalCode: s(cf?.postalCode),
+    timezone: s(cf?.timezone),
+    network: s(cf?.asOrganization),
+    asn: typeof cf?.asn === 'number' ? cf.asn : null,
+  };
+}
+
+function visitor(request: Request, deviceId: string, newDevice: boolean): Visitor {
+  const country = request.cf?.country;
+  const referrer = request.headers.get('referer');
+  return {
+    ip: request.headers.get('cf-connecting-ip'),
+    country: typeof country === 'string' ? country : null,
+    ...edgeDetails(request),
+    userAgent: request.headers.get('user-agent')?.slice(0, 400) ?? null,
+    language: firstLanguage(request.headers.get('accept-language')),
+    // Our own pages send same-origin referrers only; anything else shows where the link was posted.
+    referrer: referrer && !referrer.startsWith(new URL(request.url).origin) ? referrer.slice(0, 200) : null,
+    deviceId,
+    newDevice,
+  };
+}
+
+/** A page load in a browser tab (not a script, image or API call). */
+function isPageView(request: Request, pathname: string): boolean {
+  if (request.method !== 'GET' || pathname.startsWith('/api/') || pathname.startsWith('/assets/')) return false;
+  const dest = request.headers.get('sec-fetch-dest');
+  return dest ? dest === 'document' : (request.headers.get('accept') ?? '').includes('text/html');
+}
+
 function forward(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const headers = new Headers(request.headers);
@@ -148,6 +192,7 @@ function forward(request: Request, env: Env): Promise<Response> {
   const devCountry = env.NODE_ENV === 'development' ? request.headers.get('x-dev-country') : null;
   const country = devCountry ?? request.cf?.country;
   headers.set(COUNTRY_HEADER, typeof country === 'string' ? country : '');
+  headers.set(VISITOR_HEADER, JSON.stringify(edgeDetails(request)));
   const ip = request.headers.get('cf-connecting-ip');
   if (ip) headers.set('x-forwarded-for', ip);
   else headers.delete('x-forwarded-for');
@@ -156,28 +201,47 @@ function forward(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request, env) {
-    // IP allowlist: other addresses get a bare 403 for everything. Webhooks and the game
-    // plugin stay reachable because they come from the providers' and the game server's own
-    // addresses and are authenticated by their signatures.
-    const allowedIps = env.ALLOWED_IPS?.trim();
-    if (allowedIps && !isOpenPath(new URL(request.url).pathname) && !ipAllowed(request.headers.get('cf-connecting-ip'), allowedIps)) {
-      return ipRefusal();
-    }
-    // Members-only mode: nothing (pages, files or API) is served without the access cookie.
-    const password = env.ACCESS_PASSWORD?.trim();
-    if (password) {
-      const store = env.STORE.get(env.STORE.idFromName(STORE_NAME));
-      const limiter = { isBlocked: (ip: string) => store.accessBlocked(ip), recordFailure: (ip: string) => store.accessFailed(ip) };
-      const blocked = await gate(request, password, content.site.name, Math.floor(Date.now() / 1000), limiter);
-      if (blocked) return blocked;
-    }
-    const { pathname } = new URL(request.url);
-    if (pathname === '/api' || pathname.startsWith('/api/')) return forward(request, env);
-    return env.ASSETS.fetch(request);
-  },
+  fetch: (request, env, ctx) => handle(request, env, ctx),
 
   async scheduled(_controller, env) {
     await env.STORE.get(env.STORE.idFromName(STORE_NAME)).housekeeping();
   },
 } satisfies ExportedHandler<Env>;
+
+async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const { pathname } = url;
+  // IP allowlist: other addresses get a bare 403 for everything. Webhooks and the game
+  // plugin stay reachable because they come from the providers' and the game server's own
+  // addresses and are authenticated by their signatures.
+  const allowedIps = env.ALLOWED_IPS?.trim();
+  if (allowedIps && !isOpenPath(pathname) && !ipAllowed(request.headers.get('cf-connecting-ip'), allowedIps)) {
+    return ipRefusal();
+  }
+  const store = env.STORE.get(env.STORE.idFromName(STORE_NAME));
+  // Random per-browser id, so the log shows whether a visit comes from a device seen before.
+  const existingDevice = readDeviceId(request.headers.get('cookie'));
+  const deviceId = existingDevice ?? newDeviceId();
+  const logging = Boolean(env.DISCORD_WEBHOOK_URL) && !isOpenPath(pathname);
+  const log = (event: SiteEvent) => {
+    if (logging) ctx.waitUntil(store.logEvent(event, url.origin).catch(() => {}));
+  };
+
+  let response: Response | null = null;
+  // Members-only mode: nothing (pages, files or API) is served without the access cookie.
+  const password = env.ACCESS_PASSWORD?.trim();
+  if (password) {
+    const limiter = { isBlocked: (ip: string) => store.accessBlocked(ip), recordFailure: (ip: string) => store.accessFailed(ip) };
+    response = await gate(request, password, content.site.name, Math.floor(Date.now() / 1000), limiter, (type) =>
+      log({ type, visitor: visitor(request, deviceId, !existingDevice), path: pathname }),
+    );
+  }
+  if (!response) {
+    if (isPageView(request, pathname)) log({ type: 'member.visit', visitor: visitor(request, deviceId, !existingDevice), path: pathname });
+    response = pathname === '/api' || pathname.startsWith('/api/') ? await forward(request, env) : await env.ASSETS.fetch(request);
+  }
+  if (existingDevice || isOpenPath(pathname)) return response;
+  const withCookie = new Response(response.body, response);
+  withCookie.headers.append('Set-Cookie', deviceCookie(deviceId, url.protocol === 'https:'));
+  return withCookie;
+}

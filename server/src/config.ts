@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { validWebhookUrl } from './events.js';
 
 const flag = (fallback: boolean) =>
   z
@@ -28,6 +29,7 @@ const EnvSchema = z.object({
   PLUGIN_SECRET: optionalString,
   ACCESS_PASSWORD: optionalString,
   ALLOWED_IPS: optionalString,
+  DISCORD_WEBHOOK_URL: optionalString,
   STRIPE_SECRET_KEY: optionalString,
   STRIPE_WEBHOOK_SECRET: optionalString,
   STRIPE_API_BASE: optionalString,
@@ -69,6 +71,8 @@ export interface AppConfig {
   accessPassword: string | null;
   /** Comma-separated addresses or CIDR ranges allowed to open the site. Null means any address. */
   allowedIps: string | null;
+  /** Discord webhook that receives the activity log (events.ts). */
+  discordWebhookUrl: string | null;
   stripe: { secretKey: string; webhookSecret: string | null; apiBase: URL | null } | null;
   paypal: { clientId: string; clientSecret: string; env: 'sandbox' | 'live' } | null;
   mercadopago: { accessToken: string; webhookSecret: string | null; useSandboxUrl: boolean } | null;
@@ -146,6 +150,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error('ACCESS_PASSWORD must be at least 8 characters long.');
   }
 
+  let discordWebhookUrl = e.DISCORD_WEBHOOK_URL ?? null;
+  if (discordWebhookUrl && !validWebhookUrl(discordWebhookUrl)) {
+    warnings.push('DISCORD_WEBHOOK_URL is not a Discord webhook URL: the activity log is off.');
+    discordWebhookUrl = null;
+  }
+
   let stripeApiBase: URL | null = null;
   if (e.STRIPE_API_BASE) {
     // Only for local testing against a mock Stripe API.
@@ -219,6 +229,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     pluginSecret: e.PLUGIN_SECRET ?? null,
     accessPassword: e.ACCESS_PASSWORD ?? null,
     allowedIps: e.ALLOWED_IPS ?? null,
+    discordWebhookUrl,
     stripe,
     paypal,
     mercadopago,

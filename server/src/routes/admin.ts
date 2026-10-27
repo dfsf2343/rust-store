@@ -183,6 +183,7 @@ export function adminRoutes(ctx: AppContext): Router {
       audit(ctx.db, admin, 'admin.grant', body.steamId, { grantId, kit: kit.id, duration: duration.id, note: body.note }, now);
       return grantId;
     })();
+    void ctx.events.emit({ type: 'admin.grant', admin, steamId: body.steamId, detail: `${kit.name} (${duration.label})${body.note ? `: ${body.note}` : ''}` });
     res.json({ ok: true, grantId: id });
   });
 
@@ -199,6 +200,7 @@ export function adminRoutes(ctx: AppContext): Router {
       recomputeEntitlement(ctx.db, grant.steam_id, grant.kit_id, now);
       audit(ctx.db, admin, 'admin.revoke', grant.steam_id, { grantId: id, reason: body.reason }, now);
     })();
+    void ctx.events.emit({ type: 'admin.revoke', admin, steamId: grant.steam_id, detail: `${grant.kit_id}: ${body.reason}` });
     const remaining = computeAccess(
       ctx.db.prepare('SELECT days, granted_at, revoked_at FROM grants WHERE steam_id = ? AND kit_id = ?').all(grant.steam_id, grant.kit_id) as GrantRow[],
     );
