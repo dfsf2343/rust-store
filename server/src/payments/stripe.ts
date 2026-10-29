@@ -63,7 +63,15 @@ export class StripeProvider implements PaymentProvider {
       submit_type: 'pay',
     };
     if (opts.allowPromotionCodes) params.allow_promotion_codes = true;
-    if (opts.automaticTax) params.automatic_tax = { enabled: true };
+    if (opts.managedPayments) {
+      // Stripe picks the payment methods and handles tax itself under Managed Payments.
+      params.managed_payments = { enabled: true };
+    } else {
+      params.managed_payments = { enabled: false };
+      // A filter on Stripe's eligible methods: without "link" the Link wallet is not offered.
+      params.allowed_payment_method_types = opts.paymentMethods;
+      if (opts.automaticTax) params.automatic_tax = { enabled: true };
+    }
 
     let session: Stripe.Checkout.Session;
     try {

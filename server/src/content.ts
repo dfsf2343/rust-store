@@ -138,6 +138,10 @@ const PaymentsSchema = z.object({
   stripe: z.object({
     automaticTax: z.boolean().default(false),
     allowPromotionCodes: z.boolean().default(false),
+    /** Stripe Managed Payments makes Link the merchant of record (LINK.COM on statements). Off: the store sells directly. */
+    managedPayments: z.boolean().default(false),
+    /** Payment methods offered on Stripe Checkout when Managed Payments is off. Leaving out "link" hides the Link wallet. */
+    paymentMethods: z.array(z.enum(['card', 'link', 'cashapp', 'amazon_pay'])).min(1).default(['card']),
   }),
   paypal: z.object({
     brandName: z.string().max(127).nullable().default(null),

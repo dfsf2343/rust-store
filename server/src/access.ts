@@ -139,7 +139,7 @@ function policiesHtml(name: string): string {
 <h2>Rules, bans and chargebacks</h2>
 <p>Buying a kit does not exempt anyone from the server rules. A ban for breaking them removes access to purchased kits without a refund. Opening a chargeback or payment dispute removes the access bought with that payment and can block the account from the store.</p>
 <h2>Payments</h2>
-<p>Payments are processed by Stripe (shown on statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago. We never see your full card details. Payment providers may also apply their own buyer-protection rules.</p>
+<p>Payments are processed by Stripe and show on card statements as CC DIGITAL. We never see your full card details. Payment providers may also apply their own buyer-protection rules.</p>
 <h2>Liability and age</h2>
 <p>The server and store are provided as they are, without a guarantee of uptime. To the extent the law allows, our liability for a purchase is limited to the amount paid for it. If you are under 18, you need permission from a parent or guardian to buy.</p>
 <h2>Security logs</h2>

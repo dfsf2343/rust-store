@@ -56,9 +56,8 @@ export function Terms() {
       <p>Buying a kit does not exempt anyone from the rules. If you are banned for breaking them you lose access to purchased kits without a refund.</p>
       <h2>Payments</h2>
       <p>
-        Payments are processed by Stripe (shown on card statements as LINK.COM* CC DIGITAL), PayPal or Mercado Pago, depending on where you are. We never see or store your full card
-        details. Prices are set in US dollars; Mercado Pago charges are converted to local currency at the rate shown at checkout. Payment providers may also apply their own
-        buyer-protection rules.
+        Payments are processed by Stripe and show on card statements as CC DIGITAL. We never see or store your full card details. Prices are in US dollars; your bank may add its
+        own conversion fees. Stripe and your card issuer may also apply their own buyer-protection rules.
       </p>
       <h2>Chargebacks</h2>
       <p>

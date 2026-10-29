@@ -16,7 +16,9 @@
   },
   "stripe": {
     "automaticTax": false,
-    "allowPromotionCodes": false
+    "allowPromotionCodes": false,
+    "managedPayments": false,
+    "paymentMethods": ["card"]
   },
   "paypal": {
     "brandName": null
