@@ -84,6 +84,7 @@ describe('Stripe checkout', () => {
     // Card only, no Link wallet and no Managed Payments (Link as merchant of record).
     expect(params.managed_payments).toEqual({ enabled: false });
     expect(params.allowed_payment_method_types).toEqual(['card']);
+    expect(params.billing_address_collection).toBe('auto');
     expect(params.client_reference_id).toBe(res.body.orderId);
     expect(params.success_url).toContain(`/order/${res.body.orderId}?session_id={CHECKOUT_SESSION_ID}`);
 

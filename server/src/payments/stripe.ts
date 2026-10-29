@@ -70,6 +70,8 @@ export class StripeProvider implements PaymentProvider {
       params.managed_payments = { enabled: false };
       // A filter on Stripe's eligible methods: without "link" the Link wallet is not offered.
       params.allowed_payment_method_types = opts.paymentMethods;
+      // Only what the card needs: country, plus the postal code for US, UK and Canadian cards. No full address or name.
+      params.billing_address_collection = 'auto';
       if (opts.automaticTax) params.automatic_tax = { enabled: true };
     }
 
